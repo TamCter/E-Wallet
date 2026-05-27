@@ -38,9 +38,7 @@ export default function RegisterScreen() {
     if (error) {
       Alert.alert('Đăng ký thất bại', error.message);
     } else {
-      Alert.alert('Thành công', 'Vui lòng kiểm tra email để xác thực tài khoản.', [
-        { text: 'OK', onPress: () => router.replace('/login') }
-      ]);
+      Alert.alert('Thành công', 'Đăng ký tài khoản thành công!');
     }
   };
 

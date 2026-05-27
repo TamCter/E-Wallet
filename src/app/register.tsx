@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { AuthInput } from '@/components/ui/AuthInput';
+import { supabase } from '@/lib/supabase';
+import { Alert } from 'react-native';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -13,13 +15,33 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
+    if (!email || !password || !name || !phone) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
+      return;
+    }
+    
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      router.replace('/(tabs)');
-    }, 1500);
+    const { data, error } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+      options: {
+        data: {
+          full_name: name,
+          phone_number: phone,
+        }
+      }
+    });
+    
+    setLoading(false);
+    
+    if (error) {
+      Alert.alert('Đăng ký thất bại', error.message);
+    } else {
+      Alert.alert('Thành công', 'Vui lòng kiểm tra email để xác thực tài khoản.', [
+        { text: 'OK', onPress: () => router.replace('/login') }
+      ]);
+    }
   };
 
   return (

@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { AuthInput } from '@/components/ui/AuthInput';
+import { supabase } from '@/lib/supabase';
+import { Alert } from 'react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -11,13 +13,25 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    if (!phone || !password) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
+      return;
+    }
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      router.replace('/(tabs)');
-    }, 1500);
+    
+    // Ghi chú: Nếu Supabase của bạn chưa bật Phone Auth, bạn có thể 
+    // dùng email mapping (VD: email: `${phone}@ewallet.app`)
+    const { error } = await supabase.auth.signInWithPassword({
+      phone: phone, 
+      password: password,
+    });
+    
+    setLoading(false);
+    if (error) {
+      Alert.alert('Đăng nhập thất bại', error.message);
+    }
+    // Thành công thì AuthContext sẽ tự động chuyển hướng
   };
 
   const handleBiometric = () => {

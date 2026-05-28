@@ -34,8 +34,12 @@ export default function LoginScreen() {
         Alert.alert('Đăng nhập thất bại', signInError.message);
         return;
       }
-      // Store email for later use (profile, etc.)
-      await SecureStore.setItemAsync('lastEmail', email);
+      // Best-effort: persist email for later use; do not block navigation on failure
+      try {
+        await SecureStore.setItemAsync('lastEmail', email);
+      } catch (storeErr) {
+        console.warn('Could not persist lastEmail:', storeErr);
+      }
       // Navigate to app tabs
       router.replace('/(tabs)');
     } catch (e: any) {

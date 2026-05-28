@@ -15,6 +15,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    if (loading) return;
     if (!email) {
       Alert.alert('Lỗi', 'Vui lòng nhập email');
       return;
@@ -23,37 +24,25 @@ export default function LoginScreen() {
       Alert.alert('Lỗi', 'Vui lòng nhập mật khẩu');
       return;
     }
-    const defaultPassword = password; // use entered password
-    // Try to sign in; if user does not exist, sign up then sign in
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password: defaultPassword,
-    });
-    if (signInError) {
-      // If sign‑in failed because user not found, create the user
-      const { error: signUpError } = await supabase.auth.signUp({
+    setLoading(true);
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
-        password: defaultPassword,
-        options: { data: {} },
+        password,
       });
-      if (signUpError) {
-        Alert.alert('Đăng ký thất bại', signUpError.message);
+      if (signInError) {
+        Alert.alert('Đăng nhập thất bại', signInError.message);
         return;
       }
-      // After successful sign‑up, sign in again
-      const { error: signInAgainError } = await supabase.auth.signInWithPassword({
-        email,
-        password: defaultPassword,
-      });
-      if (signInAgainError) {
-        Alert.alert('Đăng nhập thất bại', signInAgainError.message);
-        return;
-      }
+      // Store email for later use (profile, etc.)
+      await SecureStore.setItemAsync('lastEmail', email);
+      // Navigate to app tabs
+      router.replace('/(tabs)');
+    } catch (e: any) {
+      Alert.alert('Lỗi', e?.message ?? 'Đã xảy ra lỗi không xác định');
+    } finally {
+      setLoading(false);
     }
-    // Store email for later use (profile, etc.)
-    await SecureStore.setItemAsync('lastEmail', email);
-    // Navigate to app tabs
-    router.replace('/(tabs)');
   };
 
   const handleBiometric = () => {

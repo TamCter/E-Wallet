@@ -87,7 +87,11 @@ CREATE TRIGGER on_auth_user_created
 CREATE OR REPLACE FUNCTION public.process_transfer(
     receiver_phone VARCHAR,
     transfer_amount DECIMAL
-) RETURNS UUID AS $$
+) RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_sender_wallet_id UUID;
     v_receiver_wallet_id UUID;
@@ -131,12 +135,19 @@ BEGIN
 
     RETURN v_transaction_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.process_transfer(VARCHAR, DECIMAL) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.process_transfer(VARCHAR, DECIMAL) TO authenticated;
 
 -- 2. Nạp tiền (Deposit)
 CREATE OR REPLACE FUNCTION public.process_deposit(
     deposit_amount DECIMAL
-) RETURNS UUID AS $$
+) RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_wallet_id UUID;
     v_transaction_id UUID;
@@ -158,12 +169,19 @@ BEGIN
 
     RETURN v_transaction_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.process_deposit(DECIMAL) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.process_deposit(DECIMAL) TO authenticated;
 
 -- 3. Rút tiền (Withdrawal)
 CREATE OR REPLACE FUNCTION public.process_withdrawal(
     withdrawal_amount DECIMAL
-) RETURNS UUID AS $$
+) RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_wallet_id UUID;
     v_transaction_id UUID;
@@ -185,4 +203,7 @@ BEGIN
 
     RETURN v_transaction_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.process_withdrawal(DECIMAL) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.process_withdrawal(DECIMAL) TO authenticated;

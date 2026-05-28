@@ -16,12 +16,14 @@ export default function ProfileScreen() {
       await supabase.auth.signOut();
       // Clear any stored tokens (SecureStore)
       if (Platform.OS !== 'web') {
-        await SecureStore.deleteItemAsync('supabase.auth.token'); // generic key, may vary
+        await SecureStore.deleteItemAsync('supabase.auth.token');
       }
+      // Navigate only after successful sign-out
+      router.replace('/login');
     } catch (e) {
       console.error('Logout error', e);
+      // Do not navigate if sign-out failed
     }
-    router.replace('/login');
   };
 
   return (

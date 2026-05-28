@@ -1,37 +1,42 @@
 import 'react-native-url-polyfill/auto';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Custom storage adapter để tránh lỗi SSR "window is not defined" trên Web
-const customStorageAdapter = {
-  getItem: (key: string) => {
-    if (Platform.OS === 'web' && typeof window === 'undefined') {
-      return Promise.resolve(null);
+// ----------------------------------------------------------------
+// Storage Adapter compatible with Expo Go (mobile) and Web
+// ----------------------------------------------------------------
+const storageAdapter = {
+  getItem: async (key: string) => {
+    if (Platform.OS === 'web') {
+      // Web fallback uses AsyncStorage (which itself uses localStorage under the hood)
+      return AsyncStorage.getItem(key);
     }
-    return AsyncStorage.getItem(key);
+    // Mobile (iOS/Android) uses SecureStore – encrypted & persistent
+    return SecureStore.getItemAsync(key);
   },
-  setItem: (key: string, value: string) => {
-    if (Platform.OS === 'web' && typeof window === 'undefined') {
-      return Promise.resolve();
+  setItem: async (key: string, value: string) => {
+    if (Platform.OS === 'web') {
+      return AsyncStorage.setItem(key, value);
     }
-    return AsyncStorage.setItem(key, value);
+    return SecureStore.setItemAsync(key, value);
   },
-  removeItem: (key: string) => {
-    if (Platform.OS === 'web' && typeof window === 'undefined') {
-      return Promise.resolve();
+  removeItem: async (key: string) => {
+    if (Platform.OS === 'web') {
+      return AsyncStorage.removeItem(key);
     }
-    return AsyncStorage.removeItem(key);
+    return SecureStore.deleteItemAsync(key);
   },
 };
 
-// Sử dụng biến môi trường (Environment Variables) để bảo mật API Keys
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+// Environment variables (fallback placeholders for safety)
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: customStorageAdapter,
+    storage: storageAdapter,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, ThemeProvider, Stack, useRouter, useSegments } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider, Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { useColorScheme } from 'react-native';
 import { useEffect } from 'react';
 
@@ -10,9 +10,10 @@ function RootLayoutNav() {
   const { session, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const navigationState = useRootNavigationState();
 
   useEffect(() => {
-    if (loading) return;
+    if (!navigationState?.key || loading) return;
 
     const inTabsGroup = segments[0] === '(tabs)';
     
@@ -25,7 +26,7 @@ function RootLayoutNav() {
       // Cho phép ở màn hình reset password nếu cần, ở đây tạm thời chuyển vào app luôn
       router.replace('/(tabs)');
     }
-  }, [session, loading, segments, router]);
+  }, [session, loading, segments, router, navigationState?.key]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

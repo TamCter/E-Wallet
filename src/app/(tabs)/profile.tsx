@@ -3,12 +3,24 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } fr
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ProfileMenuItem } from '@/components/ui/ProfileMenuItem';
+import { supabase } from '@/lib/supabase';
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
 export default function ProfileScreen() {
   const router = useRouter();
 
-  const handleLogout = () => {
-    // In a real app, clear tokens here
+  const handleLogout = async () => {
+    try {
+      // Clear Supabase session
+      await supabase.auth.signOut();
+      // Clear any stored tokens (SecureStore)
+      if (Platform.OS !== 'web') {
+        await SecureStore.deleteItemAsync('supabase.auth.token'); // generic key, may vary
+      }
+    } catch (e) {
+      console.error('Logout error', e);
+    }
     router.replace('/login');
   };
 

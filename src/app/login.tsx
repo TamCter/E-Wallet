@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,24 +15,49 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!phone || !password) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
+    if (!phone) {
+      Alert.alert('Lỗi', 'Vui lòng nhập số điện thoại');
       return;
     }
-    setLoading(true);
-    
-    // Ghi chú: Nếu Supabase của bạn chưa bật Phone Auth, bạn có thể 
-    // dùng email mapping (VD: email: `${phone}@ewallet.app`)
-    const { error } = await supabase.auth.signInWithPassword({
-      phone: phone, 
-      password: password,
-    });
-    
-    setLoading(false);
-    if (error) {
-      Alert.alert('Đăng nhập thất bại', error.message);
+    // Clean phone to digits only
+    const cleanedPhone = phone.replace(/\D/g, '');
+    if (cleanedPhone.length < 9) {
+      Alert.alert('Lỗi', 'Số điện thoại không hợp lệ');
+      return;
     }
-    // Thành công thì AuthContext sẽ tự động chuyển hướng
+    // Build a dummy email from phone (Supabase requires email/password)
+    const dummyEmail = `${cleanedPhone}@ewallet.app`;
+    const defaultPassword = process.env.EXPO_PUBLIC_DEFAULT_PASSWORD || 'devpass';
+    // Try to sign in; if user does not exist, sign up then sign in
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: dummyEmail,
+      password: defaultPassword,
+    });
+    if (signInError) {
+      // If sign‑in failed because user not found, create the user
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: dummyEmail,
+        password: defaultPassword,
+        options: { data: { phone_number: cleanedPhone } },
+      });
+      if (signUpError) {
+        Alert.alert('Đăng ký thất bại', signUpError.message);
+        return;
+      }
+      // After successful sign‑up, sign in again
+      const { error: signInAgainError } = await supabase.auth.signInWithPassword({
+        email: dummyEmail,
+        password: defaultPassword,
+      });
+      if (signInAgainError) {
+        Alert.alert('Đăng nhập thất bại', signInAgainError.message);
+        return;
+      }
+    }
+    // Store cleaned phone for later use (profile, etc.)
+    await SecureStore.setItemAsync('lastPhone', cleanedPhone);
+    // Navigate to app tabs
+    router.replace('/(tabs)');
   };
 
   const handleBiometric = () => {

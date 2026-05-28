@@ -10,35 +10,31 @@ import { Alert } from 'react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!phone) {
-      Alert.alert('Lỗi', 'Vui lòng nhập số điện thoại');
+    if (!email) {
+      Alert.alert('Lỗi', 'Vui lòng nhập email');
       return;
     }
-    // Clean phone to digits only
-    const cleanedPhone = phone.replace(/\D/g, '');
-    if (cleanedPhone.length < 9) {
-      Alert.alert('Lỗi', 'Số điện thoại không hợp lệ');
+    if (!password) {
+      Alert.alert('Lỗi', 'Vui lòng nhập mật khẩu');
       return;
     }
-    // Build a dummy email from phone (Supabase requires email/password)
-    const dummyEmail = `${cleanedPhone}@ewallet.app`;
-    const defaultPassword = process.env.EXPO_PUBLIC_DEFAULT_PASSWORD || 'devpass';
+    const defaultPassword = password; // use entered password
     // Try to sign in; if user does not exist, sign up then sign in
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: dummyEmail,
+      email,
       password: defaultPassword,
     });
     if (signInError) {
       // If sign‑in failed because user not found, create the user
       const { error: signUpError } = await supabase.auth.signUp({
-        email: dummyEmail,
+        email,
         password: defaultPassword,
-        options: { data: { phone_number: cleanedPhone } },
+        options: { data: {} },
       });
       if (signUpError) {
         Alert.alert('Đăng ký thất bại', signUpError.message);
@@ -46,7 +42,7 @@ export default function LoginScreen() {
       }
       // After successful sign‑up, sign in again
       const { error: signInAgainError } = await supabase.auth.signInWithPassword({
-        email: dummyEmail,
+        email,
         password: defaultPassword,
       });
       if (signInAgainError) {
@@ -54,8 +50,8 @@ export default function LoginScreen() {
         return;
       }
     }
-    // Store cleaned phone for later use (profile, etc.)
-    await SecureStore.setItemAsync('lastPhone', cleanedPhone);
+    // Store email for later use (profile, etc.)
+    await SecureStore.setItemAsync('lastEmail', email);
     // Navigate to app tabs
     router.replace('/(tabs)');
   };
@@ -82,12 +78,12 @@ export default function LoginScreen() {
 
           <View style={styles.form}>
             <AuthInput
-              label="Số điện thoại"
-              icon="call-outline"
-              placeholder="Nhập số điện thoại"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
+                label="Email"
+                icon="mail-outline"
+                placeholder="Nhập email"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
             />
 
             <View style={styles.passwordHeader}>

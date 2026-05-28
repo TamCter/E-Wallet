@@ -14,11 +14,13 @@ export default function OTPVerificationScreen() {
   const inputRefs = useRef<Array<TextInput | null>>([]);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     if (countdown > 0) {
       timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     }
-    return () => clearTimeout(timer);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [countdown]);
 
   const handleOtpChange = (text: string, index: number) => {

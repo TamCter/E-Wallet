@@ -1,10 +1,33 @@
-import { DarkTheme, DefaultTheme, ThemeProvider, Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider, Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { useColorScheme } from 'react-native';
+import { useEffect } from 'react';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 
-export default function RootLayout() {
+function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const { session, loading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+  const navigationState = useRootNavigationState();
+
+  useEffect(() => {
+    if (!navigationState?.key || loading) return;
+
+    const inTabsGroup = segments[0] === '(tabs)';
+    
+    // Nếu chưa đăng nhập và đang cố vào màn hình chính
+    if (!session && inTabsGroup) {
+      router.replace('/login');
+    } 
+    // Nếu đã đăng nhập và đang ở màn hình ngoài (login, register, onboarding...)
+    else if (session && !inTabsGroup) {
+      // Cho phép ở màn hình reset password nếu cần, ở đây tạm thời chuyển vào app luôn
+      router.replace('/(tabs)');
+    }
+  }, [session, loading, segments, router, navigationState?.key]);
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AnimatedSplashOverlay />
@@ -19,5 +42,13 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
       </Stack>
     </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
   );
 }

@@ -1,23 +1,52 @@
 import React, { useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { AuthInput } from '@/components/ui/AuthInput';
+import { supabase } from '@/lib/supabase';
+import { Alert } from 'react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    if (loading) return;
+    if (!email) {
+      Alert.alert('Lỗi', 'Vui lòng nhập email');
+      return;
+    }
+    if (!password) {
+      Alert.alert('Lỗi', 'Vui lòng nhập mật khẩu');
+      return;
+    }
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) {
+        Alert.alert('Đăng nhập thất bại', signInError.message);
+        return;
+      }
+      // Best-effort: persist email for later use; do not block navigation on failure
+      try {
+        await SecureStore.setItemAsync('lastEmail', email);
+      } catch (storeErr) {
+        console.warn('Could not persist lastEmail:', storeErr);
+      }
+      // Navigate to app tabs
       router.replace('/(tabs)');
-    }, 1500);
+    } catch (e: any) {
+      Alert.alert('Lỗi', e?.message ?? 'Đã xảy ra lỗi không xác định');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleBiometric = () => {
@@ -42,12 +71,12 @@ export default function LoginScreen() {
 
           <View style={styles.form}>
             <AuthInput
-              label="Số điện thoại"
-              icon="call-outline"
-              placeholder="Nhập số điện thoại"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
+                label="Email"
+                icon="mail-outline"
+                placeholder="Nhập email"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
             />
 
             <View style={styles.passwordHeader}>

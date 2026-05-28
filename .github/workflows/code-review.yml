@@ -1,0 +1,51 @@
+name: Gemini AI Code Reviewer
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  gemini-code-review:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/gemini-review')
+    steps:
+      - name: PR Info
+        env:
+          COMMENT: ${{ github.event.comment.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "Comment: $COMMENT"
+          echo "Issue Number: $ISSUE_NUMBER"
+          echo "Repository: $REPOSITORY"
+
+      - name: Checkout Repo
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Get PR Details
+        id: pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          PR_JSON=$(gh api repos/$REPOSITORY/pulls/$ISSUE_NUMBER)
+          echo "head_sha=$(echo $PR_JSON | jq -r .head.sha)" >> $GITHUB_OUTPUT
+          echo "base_sha=$(echo $PR_JSON | jq -r .base.sha)" >> $GITHUB_OUTPUT
+
+      - uses: Swisyn/gemini-ai-code-reviewer@41d1fc1f3835af69d5d2ad6ea1b2c23c78c8993b
+        with:
+          GITHUB_API_URL: "https://api.github.com"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-2.5-pro-preview-05-06 # Optional, default is `gemini-2.0-flash-001`
+          EXCLUDE: "*.md,*.txt,package-lock.json,*.yml,*.yaml"

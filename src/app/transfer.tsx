@@ -22,6 +22,7 @@ export default function TransferScreen() {
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const [txnId, setTxnId] = useState('');
 
   const MOCK_BALANCE = 15000000;
 
@@ -60,7 +61,10 @@ export default function TransferScreen() {
     setStep('review');
   };
 
-  const handleTransfer = () => setStep('success');
+  const handleTransfer = () => {
+    setTxnId(`TXN-${Math.random().toString(36).slice(2, 10).toUpperCase()}`);
+    setStep('success');
+  };
   const handleReset = () => {
     setStep('input');
     setPhoneCountryCode('+84');
@@ -68,9 +72,8 @@ export default function TransferScreen() {
     setRecipientName('');
     setAmount('');
     setNote('');
+    setTxnId('');
   };
-
-  const numericAmount = parseInt(amount.replace(/\./g, ''), 10) || 0;
 
   // ── Render helpers ──────────────────────────────────────────────
 
@@ -312,7 +315,7 @@ export default function TransferScreen() {
           { label: 'Đến', value: recipientName },
           { label: 'Số điện thoại', value: phone },
           { label: 'Phí', value: '0đ' },
-          { label: 'Mã tham chiếu', value: `TXN-${Math.random().toString(36).slice(2,10).toUpperCase()}` },
+          { label: 'Mã tham chiếu', value: txnId },
         ].map((row, i) => (
           <View key={i} style={styles.reviewRow}>
             <Text style={styles.reviewLabel}>{row.label}</Text>

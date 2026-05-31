@@ -15,15 +15,14 @@ function RootLayoutNav() {
   useEffect(() => {
     if (!navigationState?.key || loading) return;
 
-    const inTabsGroup = segments[0] === '(tabs)';
+    const isAuthScreen = ['login', 'register', 'forgot-password', 'otp-verification', 'reset-password', 'onboarding', 'index'].includes(segments[0] || '');
     
-    // Nếu chưa đăng nhập và đang cố vào màn hình chính
-    if (!session && inTabsGroup) {
+    // Nếu chưa đăng nhập và cố truy cập màn hình cần bảo vệ (không phải auth screen)
+    if (!session && !isAuthScreen) {
       router.replace('/login');
     } 
-    // Nếu đã đăng nhập và đang ở màn hình ngoài (login, register, onboarding...)
-    else if (session && !inTabsGroup) {
-      // Cho phép ở màn hình reset password nếu cần, ở đây tạm thời chuyển vào app luôn
+    // Nếu đã đăng nhập và đang cố truy cập màn hình auth (login, register...)
+    else if (session && isAuthScreen) {
       router.replace('/(tabs)');
     }
   }, [session, loading, segments, router, navigationState?.key]);

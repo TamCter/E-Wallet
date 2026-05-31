@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { TransactionItem } from '@/components/ui/TransactionItem';
 
 export default function HomepageScreen() {
   const [showBalance, setShowBalance] = useState(true);
+  const router = useRouter();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -52,7 +54,7 @@ export default function HomepageScreen() {
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <ActionIcon icon="paper-plane-outline" label="Transfer" />
+          <ActionIcon icon="paper-plane-outline" label="Transfer" onPress={() => router.push('/transfer' as any)} />
           <ActionIcon icon="qr-code-outline" label="Scan QR" />
           <ActionIcon icon="phone-portrait-outline" label="Mobile" />
           <ActionIcon icon="receipt-outline" label="Bills" />
@@ -117,8 +119,8 @@ export default function HomepageScreen() {
 }
 
 // Subcomponents for the screen to keep it clean
-const ActionIcon = ({ icon, label }: { icon: any, label: string }) => (
-  <TouchableOpacity style={styles.actionItem}>
+const ActionIcon = ({ icon, label, onPress }: { icon: any, label: string, onPress?: () => void }) => (
+  <TouchableOpacity style={styles.actionItem} onPress={onPress}>
     <View style={styles.actionIconContainer}>
       <Ionicons name={icon} size={24} color="#0544B3" />
     </View>

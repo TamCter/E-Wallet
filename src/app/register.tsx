@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
@@ -11,12 +11,13 @@ export default function RegisterScreen() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phoneCountryCode, setPhoneCountryCode] = useState('+84');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!email || !password || !name || !phone) {
+    if (!email || !password || !name || !phone || !phoneCountryCode) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
       return;
     }
@@ -28,6 +29,7 @@ export default function RegisterScreen() {
       options: {
         data: {
           full_name: name,
+          phone_country_code: phoneCountryCode,
           phone_number: phone,
         }
       }
@@ -76,14 +78,31 @@ export default function RegisterScreen() {
               onChangeText={setEmail}
             />
 
-            <AuthInput
-              label="Phone Number"
-              icon="call-outline"
-              placeholder="+1 (555) 000-0000"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-            />
+            <Text style={styles.phoneLabel}>Phone Number</Text>
+            <View style={styles.phoneInputContainer}>
+              <View style={styles.countryCodeContainer}>
+                <Ionicons name="call-outline" size={18} color="#A0A0A0" style={styles.countryIcon} />
+                <TextInput
+                  style={styles.countryCodeInput}
+                  placeholder="+84"
+                  placeholderTextColor="#A0A0A0"
+                  keyboardType="phone-pad"
+                  value={phoneCountryCode}
+                  onChangeText={setPhoneCountryCode}
+                  maxLength={5}
+                />
+              </View>
+              <View style={styles.phoneNumberContainer}>
+                <TextInput
+                  style={styles.phoneNumberInput}
+                  placeholder="987654321"
+                  placeholderTextColor="#A0A0A0"
+                  keyboardType="phone-pad"
+                  value={phone}
+                  onChangeText={setPhone}
+                />
+              </View>
+            </View>
 
             <AuthInput
               label="Password"
@@ -155,6 +174,56 @@ const styles = StyleSheet.create({
   },
   form: {
     width: '100%',
+  },
+  phoneLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  countryCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 50,
+    width: 90,
+    backgroundColor: '#fff',
+  },
+  phoneNumberContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 50,
+    backgroundColor: '#fff',
+  },
+  countryIcon: {
+    marginRight: 4,
+  },
+  countryCodeInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#333',
+    fontWeight: '600',
+    height: '100%',
+    textAlign: 'center',
+  },
+  phoneNumberInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    height: '100%',
   },
   hint: {
     fontSize: 12,

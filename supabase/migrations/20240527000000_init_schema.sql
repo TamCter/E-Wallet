@@ -4,9 +4,11 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 1. Tạo bảng users (liên kết với auth.users của Supabase)
 CREATE TABLE public.users (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    phone_number VARCHAR(20) UNIQUE,
+    phone_country_code VARCHAR(10) DEFAULT '+84',
+    phone_number VARCHAR(20),
     full_name VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(phone_country_code, phone_number)
 );
 
 -- 2. Tạo bảng wallets (mỗi user có 1 ví)
@@ -47,10 +49,10 @@ CREATE POLICY "Users can view own wallet" ON public.wallets FOR SELECT USING (us
 -- User có thể xem lịch sử giao dịch nếu họ là người gửi HOẶC người nhận
 CREATE POLICY "Users can view own transactions" ON public.transactions FOR SELECT 
 USING (
-    sender_wallet_id IN (SELECT id FROM public.wallets WHERE user_id = auth.uid()) 
-    OR 
-    receiver_wallet_id IN (SELECT id FROM public.wallets WHERE user_id = auth.uid())
-);
+50:     sender_wallet_id IN (SELECT id FROM public.wallets WHERE user_id = auth.uid()) 
+51:     OR 
+52:     receiver_wallet_id IN (SELECT id FROM public.wallets WHERE user_id = auth.uid())
+53: );
 
 -- --------------------------------------------------------
 -- DATABASE TRIGGERS (Tự động tạo User và Wallet khi Đăng ký)
@@ -59,9 +61,10 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
   -- Tạo bản ghi trong bảng public.users
-  INSERT INTO public.users (id, phone_number, full_name)
+  INSERT INTO public.users (id, phone_country_code, phone_number, full_name)
   VALUES (
     new.id, 
+    COALESCE(new.raw_user_meta_data->>'phone_country_code', '+84'),
     new.raw_user_meta_data->>'phone_number',
     new.raw_user_meta_data->>'full_name'
   );
@@ -85,6 +88,7 @@ CREATE TRIGGER on_auth_user_created
 
 -- 1. Chuyển tiền (Transfer)
 CREATE OR REPLACE FUNCTION public.process_transfer(
+    receiver_country_code VARCHAR,
     receiver_phone VARCHAR,
     transfer_amount DECIMAL
 ) RETURNS UUID
@@ -103,11 +107,11 @@ BEGIN
         RAISE EXCEPTION 'Không tìm thấy ví người gửi';
     END IF;
 
-    -- Lấy ví người nhận dựa trên số điện thoại
+    -- Lấy ví người nhận dựa trên số điện thoại và mã quốc gia
     SELECT w.id INTO v_receiver_wallet_id 
     FROM public.wallets w
     JOIN public.users u ON u.id = w.user_id
-    WHERE u.phone_number = receiver_phone;
+    WHERE u.phone_number = receiver_phone AND u.phone_country_code = receiver_country_code;
 
     IF v_receiver_wallet_id IS NULL THEN
         RAISE EXCEPTION 'Không tìm thấy người nhận với số điện thoại này';
@@ -137,8 +141,8 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.process_transfer(VARCHAR, DECIMAL) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.process_transfer(VARCHAR, DECIMAL) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.process_transfer(VARCHAR, VARCHAR, DECIMAL) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.process_transfer(VARCHAR, VARCHAR, DECIMAL) TO authenticated;
 
 -- 2. Nạp tiền (Deposit)
 CREATE OR REPLACE FUNCTION public.process_deposit(

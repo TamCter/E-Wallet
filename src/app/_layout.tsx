@@ -40,6 +40,7 @@ function RootLayoutNav() {
         <Stack.Screen name="otp-verification" />
         <Stack.Screen name="reset-password" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="transfer" />
       </Stack>
     </ThemeProvider>
   );

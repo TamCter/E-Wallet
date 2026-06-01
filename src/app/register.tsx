@@ -7,23 +7,7 @@ import { Dropdown } from 'react-native-element-dropdown';
 import { Button } from '@/components/ui/Button';
 import { AuthInput } from '@/components/ui/AuthInput';
 import { supabase } from '@/lib/supabase';
-
-const COUNTRY_CODES = [
-  { label: '🇻🇳 +84', value: '+84' },
-  { label: '🇺🇸 +1', value: '+1' },
-  { label: '🇬🇧 +44', value: '+44' },
-  { label: '🇯🇵 +81', value: '+81' },
-  { label: '🇰🇷 +82', value: '+82' },
-  { label: '🇨🇳 +86', value: '+86' },
-  { label: '🇸🇬 +65', value: '+65' },
-  { label: '🇹🇭 +66', value: '+66' },
-  { label: '🇲🇾 +60', value: '+60' },
-  { label: '🇦🇺 +61', value: '+61' },
-  { label: '🇨🇦 +1', value: '+1-CA' },
-  { label: '🇫🇷 +33', value: '+33' },
-  { label: '🇩🇪 +49', value: '#49' },
-  { label: '🇹🇼 +886', value: '+886' },
-];
+import { COUNTRY_CODES } from '@/constants/countryCodes';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -56,6 +40,22 @@ export default function RegisterScreen() {
     let cleanPhone = phone.replace(/\D/g, ''); // Chỉ giữ lại số
     if (cleanPhone.startsWith('0')) {
       cleanPhone = cleanPhone.substring(1);
+    }
+
+    // Kiểm tra định dạng mã quốc gia (Ví dụ: +84, +1) và số điện thoại (chỉ chứa số, độ dài từ 7 đến 15 ký tự)
+    const countryCodePattern = /^\+?\d+$/;
+    const phonePattern = /^\d{7,15}$/;
+
+    if (!cleanCountryCode || !countryCodePattern.test(cleanCountryCode)) {
+      Alert.alert('Lỗi', 'Mã quốc gia không hợp lệ');
+      setLoading(false);
+      return;
+    }
+
+    if (!cleanPhone || !phonePattern.test(cleanPhone)) {
+      Alert.alert('Lỗi', 'Số điện thoại không hợp lệ (yêu cầu từ 7 đến 15 chữ số)');
+      setLoading(false);
+      return;
     }
 
     try {

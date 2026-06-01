@@ -1,0 +1,16 @@
+export const COUNTRY_CODES = [
+  { label: '🇻🇳 +84', value: '+84' },
+  { label: '🇺🇸 +1', value: '+1' },
+  { label: '🇬🇧 +44', value: '+44' },
+  { label: '🇯🇵 +81', value: '+81' },
+  { label: '🇰🇷 +82', value: '+82' },
+  { label: '🇨🇳 +86', value: '+86' },
+  { label: '🇸🇬 +65', value: '+65' },
+  { label: '🇹🇭 +66', value: '+66' },
+  { label: '🇲🇾 +60', value: '+60' },
+  { label: '🇦🇺 +61', value: '+61' },
+  { label: '🇨🇦 +1', value: '+1-CA' },
+  { label: '🇫🇷 +33', value: '+33' },
+  { label: '🇩🇪 +49', value: '+49' },
+  { label: '🇹🇼 +886', value: '+886' },
+];

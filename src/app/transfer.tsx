@@ -9,22 +9,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Dropdown } from 'react-native-element-dropdown';
 import { supabase } from '@/lib/supabase';
+import { COUNTRY_CODES } from '@/constants/countryCodes';
 
 type Tab = 'phone' | 'qr';
-type Step = 'input' | 'amount' | 'review' | 'success';
-
-const COUNTRY_CODES = [
-  { label: '🇻🇳 +84', value: '+84' },
-  { label: '🇺🇸 +1', value: '+1' },
-  { label: '🇬🇧 +44', value: '+44' },
-  { label: '🇯🇵 +81', value: '+81' },
-  { label: '🇰🇷 +82', value: '+82' },
-  { label: '🇨🇳 +86', value: '+86' },
-  { label: '🇸🇬 +65', value: '+65' },
-  { label: '🇹🇭 +66', value: '+66' },
-  { label: '🇲🇾 +60', value: '+60' },
-  { label: '🇦🇺 +61', value: '+61' },
-];
+type Step = 'input' | 'amount' | 'review' | 'success' | 'error';
 
 export default function TransferScreen() {
   const router = useRouter();
@@ -82,23 +70,27 @@ export default function TransferScreen() {
   };
 
   // Tra cứu số điện thoại người nhận thông qua RPC bảo mật ẩn danh
-  const handlePhoneLookup = async () => {
-    if (!phoneCountryCode) {
+  const handlePhoneLookup = async (customPhone?: string, customCountryCode?: string) => {
+    const targetPhone = customPhone !== undefined ? customPhone : phone;
+    const targetCountryCode = customCountryCode !== undefined ? customCountryCode : phoneCountryCode;
+
+    if (!targetCountryCode) {
       Alert.alert('Lỗi', 'Vui lòng chọn mã quốc gia');
       return;
     }
-    if (phone.length < 9) {
+
+    let cleanPhone = targetPhone.replace(/\D/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = cleanPhone.substring(1);
+    }
+
+    if (cleanPhone.length < 9) {
       Alert.alert('Lỗi', 'Vui lòng nhập số điện thoại hợp lệ');
       return;
     }
 
     setIsLookingUp(true);
-
-    let cleanPhone = phone.replace(/\D/g, '');
-    if (cleanPhone.startsWith('0')) {
-      cleanPhone = cleanPhone.substring(1);
-    }
-    const cleanCode = phoneCountryCode.split('-')[0].trim();
+    const cleanCode = targetCountryCode.split('-')[0].trim();
 
     try {
       // Gọi RPC find_user_by_phone chạy xuyên tường vào bảng Auth hệ thống
@@ -110,6 +102,8 @@ export default function TransferScreen() {
       if (error) throw error;
 
       if (data && data.length > 0) {
+        setPhone(targetPhone);
+        setPhoneCountryCode(targetCountryCode);
         setRecipientName(data[0].full_name);
         setStep('amount');
       } else {
@@ -156,8 +150,12 @@ export default function TransferScreen() {
 
       if (error) {
         Alert.alert('Giao dịch thất bại', error.message);
+      } else if (!transactionId) {
+        console.error('Giao dịch thất bại: process_transfer RPC returned an empty transactionId.', { transactionId });
+        Alert.alert('Giao dịch thất bại', 'Không nhận được mã giao dịch hợp lệ từ hệ thống.');
+        setStep('error');
       } else {
-        setTxnId(transactionId || `TXN-${Math.random().toString(36).slice(2, 10).toUpperCase()}`);
+        setTxnId(transactionId);
         setStep('success');
         fetchWalletBalance();
       }
@@ -255,7 +253,7 @@ export default function TransferScreen() {
 
       <TouchableOpacity
         style={[styles.primaryBtn, isLookingUp && styles.btnDisabled]}
-        onPress={handlePhoneLookup}
+        onPress={() => handlePhoneLookup()}
         disabled={isLookingUp}
       >
         <Text style={styles.primaryBtnText}>
@@ -272,7 +270,7 @@ export default function TransferScreen() {
         <TouchableOpacity
           key={i}
           style={styles.contactRow}
-          onPress={() => { setPhone(c.phone); setRecipientName(c.name); setStep('amount'); }}
+          onPress={() => handlePhoneLookup(c.phone, phoneCountryCode)}
         >
           <View style={styles.contactAvatar}>
             <Text style={styles.contactInitial}>{c.name[0]}</Text>
@@ -435,10 +433,54 @@ export default function TransferScreen() {
     </View>
   );
 
+  const renderErrorStep = () => (
+    <View style={styles.successContainer}>
+      <View style={styles.successIconWrapper}>
+        <Ionicons name="close-circle" size={80} color="#FFD2D2" />
+      </View>
+      <Text style={styles.successTitle}>Giao dịch thất bại!</Text>
+      <Text style={styles.successSub}>Đã có lỗi xảy ra trong quá trình xử lý giao dịch</Text>
+
+      <View style={styles.successCard}>
+        <Text style={{ textAlign: 'center', fontSize: 16, color: '#D32F2F', fontWeight: 'bold', marginVertical: 12 }}>
+          Không nhận được mã giao dịch hợp lệ
+        </Text>
+        <Text style={{ textAlign: 'center', fontSize: 14, color: '#666', lineHeight: 20, marginBottom: 12 }}>
+          Hệ thống không phản hồi mã giao dịch để đối soát. Vui lòng kiểm tra lại số dư hoặc thử lại sau.
+        </Text>
+        <View style={styles.divider} />
+        {[
+          { label: 'Người nhận', value: recipientName },
+          { label: 'Số điện thoại', value: `${phoneCountryCode} ${phone}` },
+        ].map((row, i) => (
+          <View key={i} style={styles.reviewRow}>
+            <Text style={styles.reviewLabel}>{row.label}</Text>
+            <Text style={styles.reviewValue}>{row.value}</Text>
+          </View>
+        ))}
+      </View>
+
+      <TouchableOpacity style={[styles.primaryBtn, { marginTop: 24, backgroundColor: '#D32F2F', shadowColor: '#D32F2F' }]} onPress={() => router.replace('/(tabs)')}>
+        <Text style={styles.primaryBtnText}>Về trang chủ</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.cancelBtn} onPress={handleReset}>
+        <Text style={styles.cancelBtnText}>Thử lại giao dịch</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   if (step === 'success') {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: '#0544B3' }]}>
         {renderSuccessStep()}
+      </SafeAreaView>
+    );
+  }
+
+  if (step === 'error') {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: '#D32F2F' }]}>
+        {renderErrorStep()}
       </SafeAreaView>
     );
   }

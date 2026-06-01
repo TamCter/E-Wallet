@@ -39,14 +39,16 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 
--- [SỬA ĐỔI QUAN TRỌNG Ở ĐÂY] 
--- Thay vì chỉ cho xem chính mình, cho phép tất cả tài khoản đã đăng nhập (authenticated) 
--- tìm kiếm thông tin của nhau dựa trên số điện thoại phục vụ việc Chuyển Tiền công khai.
-CREATE POLICY "Allow authenticated users to search profiles" ON public.users 
-    FOR SELECT TO authenticated USING (true);
+-- Thu hồi quyền SELECT trực tiếp trên bảng public.users cho vai trò authenticated
+REVOKE SELECT ON public.users FROM authenticated;
 
+-- Cho phép người dùng cập nhật thông tin cá nhân của chính họ
 CREATE POLICY "Users can update own profile" ON public.users 
     FOR UPDATE USING (auth.uid() = id);
+
+-- Cho phép người dùng xem thông tin cá nhân của chính họ
+CREATE POLICY "Users can view own profile" ON public.users 
+    FOR SELECT USING (auth.uid() = id);
 
 -- User chỉ được xem ví của chính mình
 CREATE POLICY "Users can view own wallet" ON public.wallets 
@@ -171,31 +173,34 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.process_transfer(VARCHAR, VARCHAR, DECIMAL) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.process_transfer(VARCHAR, VARCHAR, DECIMAL) TO authenticated;
 
--- 2. Nạp tiền (Deposit)
-CREATE OR REPLACE FUNCTION public.process_deposit(
-    deposit_amount DECIMAL
-) RETURNS UUID
+-- 2. Tìm kiếm thông tin người dùng theo số điện thoại (RPC bảo mật ẩn danh)
+CREATE OR REPLACE FUNCTION public.find_user_by_phone(
+    p_country_code VARCHAR,
+    p_phone VARCHAR
+) RETURNS TABLE (
+    full_name VARCHAR
+)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 DECLARE
-    v_wallet_id UUID;
-    v_transaction_id UUID;
+    v_clean_phone VARCHAR;
+BEGIN
+    -- Làm sạch số điện thoại người nhận: cắt bỏ số 0 ở đầu nếu có
+    v_clean_phone := p_phone;
+    IF v_clean_phone LIKE '0%' THEN
+        v_clean_phone := SUBSTRING(v_clean_phone FROM 2);
+    END IF;
+
+    RETURN QUERY
+    SELECT u.full_name
+    FROM public.users u
+    WHERE u.phone_country_code = p_country_code
+      AND u.phone_number = v_clean_phone
+    LIMIT 1;
 END;
-...
-``` *(Các hàm nạp và rút tiền bên dưới giữ nguyên cấu trúc chuẩn của bạn vì không ảnh hưởng bởi logic số điện thoại)*
+$$;
 
----
-
-### 💡 Lưu ý quan trọng đồng bộ với Frontend:
-Để hàm `process_transfer` này hoạt động hoàn hảo với file `transfer.tsx` đã viết trước đó, tại bước gọi RPC trong React Native bạn hãy cập nhật truyền đủ 3 tham số như sau:
-
-```tsx
-// Trong file transfer.tsx -> hàm handleTransfer:
-const { data: transactionId, error } = await supabase
-  .rpc('process_transfer', { 
-    receiver_country_code: phoneCountryCode.trim(), // Thêm tham số này để khớp với DB mới
-    receiver_phone: phone.trim(), 
-    transfer_amount: numAmount 
-  });
+REVOKE EXECUTE ON FUNCTION public.find_user_by_phone(VARCHAR, VARCHAR) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.find_user_by_phone(VARCHAR, VARCHAR) TO authenticated;

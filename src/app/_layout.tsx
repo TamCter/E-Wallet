@@ -15,14 +15,18 @@ function RootLayoutNav() {
   useEffect(() => {
     if (!navigationState?.key || loading) return;
 
-    const isAuthScreen = ['login', 'register', 'forgot-password', 'otp-verification', 'reset-password', 'onboarding', 'index'].includes(segments[0] || '');
+    const guestOnlyScreens = ['login', 'register', 'onboarding', 'index'];
+    const publicScreens = ['reset-password', 'otp-verification', 'forgot-password'];
     
-    // Nếu chưa đăng nhập và cố truy cập màn hình cần bảo vệ (không phải auth screen)
-    if (!session && !isAuthScreen) {
+    const isGuestOnly = guestOnlyScreens.includes(segments[0] || '');
+    const isPublic = publicScreens.includes(segments[0] || '');
+    
+    // Nếu chưa đăng nhập và cố truy cập màn hình cần bảo vệ (không phải guest-only và không phải public)
+    if (!session && !isGuestOnly && !isPublic) {
       router.replace('/login');
     } 
-    // Nếu đã đăng nhập và đang cố truy cập màn hình auth (login, register...)
-    else if (session && isAuthScreen) {
+    // Nếu đã đăng nhập và đang cố truy cập màn hình guest-only (login, register, onboarding, index)
+    else if (session && isGuestOnly) {
       router.replace('/(tabs)');
     }
   }, [session, loading, segments, router, navigationState?.key]);

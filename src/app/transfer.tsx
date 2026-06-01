@@ -1,67 +1,42 @@
-// Thay thế toàn bộ nội dung file transfer.tsx bằng mã nguồn dưới đây:
-import React, { useState, useEffect } from 'react';
+﻿import React from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  TextInput, ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+  TextInput, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { Dropdown } from 'react-native-element-dropdown';
-import { supabase } from '@/lib/supabase';
 import { COUNTRY_CODES } from '@/constants/countryCodes';
-
-type Tab = 'phone' | 'qr';
-type Step = 'input' | 'amount' | 'review' | 'success' | 'error';
+import { useTransferLogic } from '@/logic/useTransferLogic';
 
 export default function TransferScreen() {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>('phone');
-  const [step, setStep] = useState<Step>('input');
-
-  const [phoneCountryCode, setPhoneCountryCode] = useState('+84');
-  const [phone, setPhone] = useState('');
-  const [recipientName, setRecipientName] = useState('');
-  const [isLookingUp, setIsLookingUp] = useState(false);
-  const [amount, setAmount] = useState('');
-  const [note, setNote] = useState('');
-  const [txnId, setTxnId] = useState('');
-
-  const [realBalance, setRealBalance] = useState<number>(0);
-  const [isDropdownFocus, setIsDropdownFocus] = useState(false);
-  const [isTransferring, setIsTransferring] = useState(false);
-
-  useEffect(() => {
-    fetchWalletBalance();
-  }, []);
-
-  const fetchWalletBalance = async () => {
-    try {
-      // Thêm điều kiện .eq('user_id', ...) để RLS lọc chuẩn xác và đổi thành .maybeSingle()
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: wallet, error } = await supabase
-        .from('wallets')
-        .select('balance')
-        .eq('user_id', user.id) // Đảm bảo lấy đúng ví của user hiện tại
-        .maybeSingle(); // An toàn hơn .single(), không lo bị lỗi Coerce JSON
-
-      if (error) {
-        console.error("Lỗi truy vấn ví từ Supabase:", error.message);
-        return;
-      }
-
-      if (wallet) {
-        setRealBalance(wallet.balance);
-      } else {
-        // Trường hợp tài khoản cũ không có ví, đặt số dư mặc định là 0
-        setRealBalance(0);
-      }
-    } catch (err) {
-      console.error("Lỗi lấy thông tin số dư:", err);
-    }
-  };
+  const {
+    router,
+    activeTab,
+    setActiveTab,
+    step,
+    setStep,
+    phoneCountryCode,
+    setPhoneCountryCode,
+    phone,
+    setPhone,
+    recipientName,
+    setRecipientName,
+    isLookingUp,
+    amount,
+    setAmount,
+    note,
+    setNote,
+    txnId,
+    realBalance,
+    isDropdownFocus,
+    setIsDropdownFocus,
+    isTransferring,
+    handlePhoneLookup,
+    handleConfirm,
+    handleTransfer,
+    handleReset,
+  } = useTransferLogic();
 
   const formatCurrency = (val: string | number) => {
     const stringVal = typeof val === 'number' ? String(val) : val;
@@ -69,114 +44,7 @@ export default function TransferScreen() {
     return num.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
-  // Tra cứu số điện thoại người nhận thông qua RPC bảo mật ẩn danh
-  const handlePhoneLookup = async (customPhone?: string, customCountryCode?: string) => {
-    const targetPhone = customPhone !== undefined ? customPhone : phone;
-    const targetCountryCode = customCountryCode !== undefined ? customCountryCode : phoneCountryCode;
-
-    if (!targetCountryCode) {
-      Alert.alert('Lỗi', 'Vui lòng chọn mã quốc gia');
-      return;
-    }
-
-    let cleanPhone = targetPhone.replace(/\D/g, '');
-    if (cleanPhone.startsWith('0')) {
-      cleanPhone = cleanPhone.substring(1);
-    }
-
-    if (cleanPhone.length < 9) {
-      Alert.alert('Lỗi', 'Vui lòng nhập số điện thoại hợp lệ');
-      return;
-    }
-
-    setIsLookingUp(true);
-    const cleanCode = targetCountryCode.split('-')[0].trim();
-
-    try {
-      // Gọi RPC find_user_by_phone chạy xuyên tường vào bảng Auth hệ thống
-      const { data, error } = await supabase.rpc('find_user_by_phone', {
-        p_country_code: cleanCode,
-        p_phone: cleanPhone
-      });
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        setPhone(targetPhone);
-        setPhoneCountryCode(targetCountryCode);
-        setRecipientName(data[0].full_name);
-        setStep('amount');
-      } else {
-        Alert.alert('Không tìm thấy', 'Số điện thoại này chưa đăng ký tài khoản ví.');
-      }
-    } catch (err: any) {
-      Alert.alert('Lỗi', 'Không thể kiểm tra thông tin người nhận: ' + err.message);
-    } finally {
-      setIsLookingUp(false);
-    }
-  };
-
-  const handleConfirm = () => {
-    const numAmount = parseInt(amount.replace(/\./g, ''), 10);
-    if (!numAmount || numAmount < 1000) {
-      Alert.alert('Lỗi', 'Số tiền tối thiểu là 1.000đ');
-      return;
-    }
-    if (numAmount > realBalance) {
-      Alert.alert('Lỗi', 'Số dư tài khoản không đủ');
-      return;
-    }
-    setStep('review');
-  };
-
-  const handleTransfer = async () => {
-    const numAmount = parseInt(amount.replace(/\./g, ''), 10);
-    setIsTransferring(true);
-
-    let cleanPhone = phone.replace(/\D/g, '');
-    if (cleanPhone.startsWith('0')) {
-      cleanPhone = cleanPhone.substring(1);
-    }
-    const cleanCode = phoneCountryCode.split('-')[0].trim();
-
-    try {
-      // Đẩy đủ 3 tham số để đồng bộ hóa logic DB tìm kiếm theo Auth Metadata
-      const { data: transactionId, error } = await supabase
-        .rpc('process_transfer', {
-          receiver_country_code: cleanCode,
-          receiver_phone: cleanPhone,
-          transfer_amount: numAmount
-        });
-
-      if (error) {
-        Alert.alert('Giao dịch thất bại', error.message);
-      } else if (!transactionId) {
-        console.error('Giao dịch thất bại: process_transfer RPC returned an empty transactionId.', { transactionId });
-        Alert.alert('Giao dịch thất bại', 'Không nhận được mã giao dịch hợp lệ từ hệ thống.');
-        setStep('error');
-      } else {
-        setTxnId(transactionId);
-        setStep('success');
-        fetchWalletBalance();
-      }
-    } catch (err: any) {
-      Alert.alert('Lỗi kết nối', err.message);
-    } finally {
-      setIsTransferring(false);
-    }
-  };
-
-  const handleReset = () => {
-    setStep('input');
-    setPhoneCountryCode('+84');
-    setPhone('');
-    setRecipientName('');
-    setAmount('');
-    setNote('');
-    setTxnId('');
-  };
-
-  const renderHeader = () => (
+const renderHeader = () => (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => step === 'input' ? router.back() : setStep(step === 'amount' ? 'input' : step === 'review' ? 'amount' : 'input')} style={styles.backBtn}>
         <Ionicons name="arrow-back" size={22} color="#1a1a1a" />

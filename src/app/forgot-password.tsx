@@ -1,24 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { AuthInput } from '@/components/ui/AuthInput';
+import { useForgotPasswordLogic } from '@/logic/useForgotPasswordLogic';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
-  const [phone, setPhone] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleContinue = () => {
-    setLoading(true);
-    // Simulate API call to send OTP
-    setTimeout(() => {
-      setLoading(false);
-      router.push('/otp-verification');
-    }, 1500);
-  };
+  const {
+    phone,
+    setPhone,
+    loading,
+    handleContinue,
+  } = useForgotPasswordLogic();
 
   return (
     <SafeAreaView style={styles.container}>

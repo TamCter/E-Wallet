@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,52 @@ import * as SecureStore from 'expo-secure-store';
 
 export default function ProfileScreen() {
   const router = useRouter();
+
+  // Các state để lưu thông tin người dùng và trạng thái loading
+  const [userData, setUserData] = useState<{ fullName: string; phoneNumber: string } | null>(null);
+  const [balance, setBalance] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    fetchProfileAndWallet();
+  }, []);
+
+  const fetchProfileAndWallet = async () => {
+    try {
+      setIsLoading(true);
+
+      // 1. Lấy thông tin user hiện tại từ Supabase Auth
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        console.error('Lỗi lấy thông tin Auth hoặc chưa đăng nhập:', authError);
+        router.replace('/login');
+        return;
+      }
+
+      // Trích xuất thông tin được đồng bộ từ metadata khi đăng ký
+      const fullName = user.user_metadata?.full_name || 'Người dùng';
+      const phoneNumber = user.user_metadata?.phone_number || 'Chưa cập nhật';
+      setUserData({ fullName, phoneNumber });
+
+      // 2. Lấy thông tin ví (Số dư) từ bảng 'wallets'
+      const { data: wallet, error: walletError } = await supabase
+        .from('wallets')
+        .select('balance')
+        .single(); // Nhờ cơ chế RLS chỉ lấy được ví của user này
+
+      if (walletError) {
+        console.error('Lỗi lấy số dư ví:', walletError.message);
+      } else if (wallet) {
+        setBalance(wallet.balance); // Gán số dư thực tế
+      }
+
+    } catch (error) {
+      console.error('Đã xảy ra lỗi hệ thống khi tải profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -26,14 +72,17 @@ export default function ProfileScreen() {
     }
   };
 
+  // Định dạng số tiền thành chuỗi hiển thị tiền tệ Việt Nam (Ví dụ: 12,500,000)
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN').format(amount);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton}>
-            {/* The design has a back button, but usually tab screens don't. 
-                Leaving it here for visual parity, though it might not do anything in a tab root. */}
             <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Hồ sơ cá nhân</Text>
@@ -43,68 +92,82 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Profile Info */}
-        <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={48} color="#0544B3" />
+        {isLoading ? (
+          // Hiển thị vòng xoay khi đang tải dữ liệu từ API
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0544B3" />
+            <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+          </View>
+        ) : (
+          <>
+            {/* Profile Info */}
+            <View style={styles.profileSection}>
+              <View style={styles.avatarContainer}>
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons name="person" size={48} color="#0544B3" />
+                </View>
+                <TouchableOpacity style={styles.editBadge}>
+                  <Ionicons name="pencil" size={12} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              {/* Hiển thị Tên người dùng từ API */}
+              <Text style={styles.userName}>{userData?.fullName}</Text>
+              {/* Hiển thị Số điện thoại từ API */}
+              <Text style={styles.userPhone}>{userData?.phoneNumber}</Text>
             </View>
-            <TouchableOpacity style={styles.editBadge}>
-              <Ionicons name="pencil" size={12} color="#fff" />
+
+            {/* Balance & Rank Card */}
+            <View style={styles.balanceCard}>
+              <View>
+                <Text style={styles.balanceLabel}>SỐ DƯ KHẢ DỤNG</Text>
+                {/* Hiển thị Số dư từ API */}
+                <Text style={styles.balanceAmount}>
+                  {formatCurrency(balance)} <Text style={styles.currency}>VND</Text>
+                </Text>
+              </View>
+              <View style={styles.rankBadge}>
+                <Ionicons name="star" size={14} color="#FFC107" />
+                <View style={styles.rankTextContainer}>
+                  <Text style={styles.rankTitle}>Hạng Vàng</Text>
+                  <Text style={styles.rankPoints}>2,000 điểm</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Settings Menu */}
+            <Text style={styles.sectionTitle}>CÀI ĐẶT TÀI KHOẢN</Text>
+            <View style={styles.menuGroup}>
+              <ProfileMenuItem title="Thông tin cá nhân" icon="person-outline" />
+              <ProfileMenuItem
+                title="Bảo mật & Quyền riêng tư"
+                subtitle="Mật khẩu, Sinh trắc học"
+                icon="shield-checkmark-outline"
+              />
+              <ProfileMenuItem
+                title="Ngân hàng liên kết"
+                subtitle="2 ngân hàng đang liên kết"
+                icon="card-outline"
+              />
+              <ProfileMenuItem title="Cài đặt thông báo" icon="notifications-outline" isLast />
+            </View>
+
+            {/* Support Menu */}
+            <Text style={styles.sectionTitle}>HỖ TRỢ & TIỆN ÍCH</Text>
+            <View style={styles.menuGroup}>
+              <ProfileMenuItem title="Trung tâm trợ giúp" icon="help-circle-outline" />
+              <ProfileMenuItem title="Điều khoản & Chính sách" icon="document-text-outline" isLast />
+            </View>
+
+            {/* Logout Button */}
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={20} color="#D32F2F" />
+              <Text style={styles.logoutText}>Đăng xuất</Text>
             </TouchableOpacity>
-          </View>
-          <Text style={styles.userName}>Hoàng Lâm</Text>
-          <Text style={styles.userPhone}>+84 987 654 321</Text>
-        </View>
 
-        {/* Balance & Rank Card */}
-        <View style={styles.balanceCard}>
-          <View>
-            <Text style={styles.balanceLabel}>SỐ DƯ KHẢ DỤNG</Text>
-            <Text style={styles.balanceAmount}>12,500,000 <Text style={styles.currency}>VND</Text></Text>
-          </View>
-          <View style={styles.rankBadge}>
-            <Ionicons name="star" size={14} color="#FFC107" />
-            <View style={styles.rankTextContainer}>
-              <Text style={styles.rankTitle}>Hạng Vàng</Text>
-              <Text style={styles.rankPoints}>2,000 điểm</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Settings Menu */}
-        <Text style={styles.sectionTitle}>CÀI ĐẶT TÀI KHOẢN</Text>
-        <View style={styles.menuGroup}>
-          <ProfileMenuItem title="Thông tin cá nhân" icon="person-outline" />
-          <ProfileMenuItem 
-            title="Bảo mật & Quyền riêng tư" 
-            subtitle="Mật khẩu, Sinh trắc học"
-            icon="shield-checkmark-outline" 
-          />
-          <ProfileMenuItem 
-            title="Ngân hàng liên kết" 
-            subtitle="2 ngân hàng đang liên kết"
-            icon="card-outline" 
-          />
-          <ProfileMenuItem title="Cài đặt thông báo" icon="notifications-outline" isLast />
-        </View>
-
-        {/* Support Menu */}
-        <Text style={styles.sectionTitle}>HỖ TRỢ & TIỆN ÍCH</Text>
-        <View style={styles.menuGroup}>
-          <ProfileMenuItem title="Trung tâm trợ giúp" icon="help-circle-outline" />
-          <ProfileMenuItem title="Điều khoản & Chính sách" icon="document-text-outline" isLast />
-        </View>
-
-        {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color="#D32F2F" />
-          <Text style={styles.logoutText}>Đăng xuất</Text>
-        </TouchableOpacity>
-
-        {/* App Version */}
-        <Text style={styles.versionText}>Phiên bản 2.4.1 (Build 1084)</Text>
-        
+            {/* App Version */}
+            <Text style={styles.versionText}>Phiên bản 2.4.1 (Build 1084)</Text>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -280,5 +343,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 12,
     color: '#A0A0A0',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
   },
 });

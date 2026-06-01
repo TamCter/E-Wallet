@@ -3,9 +3,27 @@ import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platfor
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Dropdown } from 'react-native-element-dropdown';
 import { Button } from '@/components/ui/Button';
 import { AuthInput } from '@/components/ui/AuthInput';
 import { supabase } from '@/lib/supabase';
+
+const COUNTRY_CODES = [
+  { label: '🇻🇳 +84', value: '+84' },
+  { label: '🇺🇸 +1', value: '+1' },
+  { label: '🇬🇧 +44', value: '+44' },
+  { label: '🇯🇵 +81', value: '+81' },
+  { label: '🇰🇷 +82', value: '+82' },
+  { label: '🇨🇳 +86', value: '+86' },
+  { label: '🇸🇬 +65', value: '+65' },
+  { label: '🇹🇭 +66', value: '+66' },
+  { label: '🇲🇾 +60', value: '+60' },
+  { label: '🇦🇺 +61', value: '+61' },
+  { label: '🇨🇦 +1', value: '+1-CA' },
+  { label: '🇫🇷 +33', value: '+33' },
+  { label: '🇩🇪 +49', value: '#49' },
+  { label: '🇹🇼 +886', value: '+886' },
+];
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -15,38 +33,64 @@ export default function RegisterScreen() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isFocus, setIsFocus] = useState(false);
 
   const handleRegister = async () => {
     if (!email || !password || !name || !phone || !phoneCountryCode) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
       return;
     }
-    
+
+    if (password.length < 8) {
+      Alert.alert('Lỗi', 'Mật khẩu phải chứa ít nhất 8 ký tự');
+      return;
+    }
+
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: email,
-      password: password,
-      options: {
-        data: {
-          full_name: name,
-          phone_country_code: phoneCountryCode,
-          phone_number: phone,
+
+    // 1. Làm sạch Country Code phòng trường hợp dính mã định danh (Ví dụ: +1-CA -> +1)
+    const cleanCountryCode = phoneCountryCode.split('-')[0].trim();
+
+    // 2. Làm sạch số điện thoại: Xoá khoảng trắng, kí tự đặc biệt và số 0 ở đầu 
+    // Việc cắt số 0 ở đầu giúp đồng bộ định dạng lưu trữ quốc tế (Ví dụ: +84 và 987654321)
+    let cleanPhone = phone.replace(/\D/g, ''); // Chỉ giữ lại số
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = cleanPhone.substring(1);
+    }
+
+    try {
+      // Gọi API Supabase tạo tài khoản vào hệ thống Auth độc lập
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password: password,
+        options: {
+          data: {
+            full_name: name.trim(),
+            phone_country_code: cleanCountryCode,
+            phone_number: cleanPhone,
+          }
         }
+      });
+
+      if (error) {
+        Alert.alert('Đăng ký thất bại', error.message);
+      } else {
+        Alert.alert(
+          'Thành công',
+          'Đăng ký tài khoản thành công! Bạn có thể tiến hành đăng nhập.',
+          [{ text: 'OK', onPress: () => router.replace('/login') }]
+        );
       }
-    });
-    
-    setLoading(false);
-    
-    if (error) {
-      Alert.alert('Đăng ký thất bại', error.message);
-    } else {
-      Alert.alert('Thành công', 'Đăng ký tài khoản thành công!');
+    } catch (err: any) {
+      Alert.alert('Lỗi hệ thống', 'Không thể kết nối đến máy chủ.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
@@ -80,18 +124,30 @@ export default function RegisterScreen() {
 
             <Text style={styles.phoneLabel}>Phone Number</Text>
             <View style={styles.phoneInputContainer}>
-              <View style={styles.countryCodeContainer}>
-                <Ionicons name="call-outline" size={18} color="#A0A0A0" style={styles.countryIcon} />
-                <TextInput
-                  style={styles.countryCodeInput}
-                  placeholder="+84"
-                  placeholderTextColor="#A0A0A0"
-                  keyboardType="phone-pad"
-                  value={phoneCountryCode}
-                  onChangeText={setPhoneCountryCode}
-                  maxLength={5}
-                />
-              </View>
+              <Dropdown
+                style={[styles.dropdown, isFocus && { borderColor: '#0544B3' }]}
+                placeholderStyle={styles.placeholderStyle}
+                selectedTextStyle={styles.selectedTextStyle}
+                inputSearchStyle={styles.inputSearchStyle}
+                data={COUNTRY_CODES}
+                search
+                maxHeight={300}
+                labelField="label"
+                valueField="value"
+                placeholder={!isFocus ? 'Chọn' : '...'}
+                searchPlaceholder="Tìm kiếm..."
+                value={phoneCountryCode}
+                onFocus={() => setIsFocus(true)}
+                onBlur={() => setIsFocus(false)}
+                onChange={item => {
+                  setPhoneCountryCode(item.value);
+                  setIsFocus(false);
+                }}
+                renderLeftIcon={() => (
+                  <Ionicons name="call-outline" size={16} color="#A0A0A0" style={{ marginRight: 4 }} />
+                )}
+              />
+
               <View style={styles.phoneNumberContainer}>
                 <TextInput
                   style={styles.phoneNumberInput}
@@ -186,16 +242,28 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 16,
   },
-  countryCodeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  dropdown: {
+    height: 50,
+    width: 115,
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
-    paddingHorizontal: 10,
-    height: 50,
-    width: 90,
+    paddingHorizontal: 8,
     backgroundColor: '#fff',
+  },
+  placeholderStyle: {
+    fontSize: 14,
+    color: '#A0A0A0',
+  },
+  selectedTextStyle: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
+  },
+  inputSearchStyle: {
+    height: 40,
+    fontSize: 14,
+    borderRadius: 4,
   },
   phoneNumberContainer: {
     flex: 1,
@@ -207,17 +275,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 50,
     backgroundColor: '#fff',
-  },
-  countryIcon: {
-    marginRight: 4,
-  },
-  countryCodeInput: {
-    flex: 1,
-    fontSize: 15,
-    color: '#333',
-    fontWeight: '600',
-    height: '100%',
-    textAlign: 'center',
   },
   phoneNumberInput: {
     flex: 1,

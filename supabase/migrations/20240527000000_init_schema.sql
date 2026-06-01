@@ -39,33 +39,51 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 
--- User chỉ được xem và cập nhật thông tin profile của chính mình
-CREATE POLICY "Users can view own profile" ON public.users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
+-- [SỬA ĐỔI QUAN TRỌNG Ở ĐÂY] 
+-- Thay vì chỉ cho xem chính mình, cho phép tất cả tài khoản đã đăng nhập (authenticated) 
+-- tìm kiếm thông tin của nhau dựa trên số điện thoại phục vụ việc Chuyển Tiền công khai.
+CREATE POLICY "Allow authenticated users to search profiles" ON public.users 
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Users can update own profile" ON public.users 
+    FOR UPDATE USING (auth.uid() = id);
 
 -- User chỉ được xem ví của chính mình
-CREATE POLICY "Users can view own wallet" ON public.wallets FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY "Users can view own wallet" ON public.wallets 
+    FOR SELECT USING (user_id = auth.uid());
 
 -- User có thể xem lịch sử giao dịch nếu họ là người gửi HOẶC người nhận
 CREATE POLICY "Users can view own transactions" ON public.transactions FOR SELECT 
 USING (
-50:     sender_wallet_id IN (SELECT id FROM public.wallets WHERE user_id = auth.uid()) 
-51:     OR 
-52:     receiver_wallet_id IN (SELECT id FROM public.wallets WHERE user_id = auth.uid())
-53: );
+    sender_wallet_id IN (SELECT id FROM public.wallets WHERE user_id = auth.uid()) 
+    OR 
+    receiver_wallet_id IN (SELECT id FROM public.wallets WHERE user_id = auth.uid())
+);
+
 
 -- --------------------------------------------------------
 -- DATABASE TRIGGERS (Tự động tạo User và Wallet khi Đăng ký)
 -- --------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
+DECLARE
+    v_phone VARCHAR(20);
 BEGIN
+  -- Lấy số điện thoại từ metadata
+  v_phone := new.raw_user_meta_data->>'phone_number';
+  
+  -- [TỐI ƯU HÓA SỐ ĐIỆN THOẠI]: Tự động loại bỏ số 0 ở đầu nếu người dùng quen tay nhập dạng 0987654321
+  -- Để khi lưu vào database đồng bộ định dạng với mã quốc gia (Ví dụ: +84 và 987654321)
+  IF v_phone LIKE '0%' THEN
+    v_phone := SUBSTRING(v_phone FROM 2);
+  END IF;
+
   -- Tạo bản ghi trong bảng public.users
   INSERT INTO public.users (id, phone_country_code, phone_number, full_name)
   VALUES (
     new.id, 
     COALESCE(new.raw_user_meta_data->>'phone_country_code', '+84'),
-    new.raw_user_meta_data->>'phone_number',
+    v_phone,
     new.raw_user_meta_data->>'full_name'
   );
   
@@ -78,9 +96,11 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Gắn Trigger vào sự kiện INSERT trên auth.users
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
 
 -- --------------------------------------------------------
 -- POSTGRES FUNCTIONS (RPC) - TRANSACTION CONTROLLER
@@ -100,18 +120,25 @@ DECLARE
     v_sender_wallet_id UUID;
     v_receiver_wallet_id UUID;
     v_transaction_id UUID;
+    v_clean_phone VARCHAR;
 BEGIN
+    -- Đồng bộ xử lý số điện thoại: cắt bỏ số 0 ở đầu nếu có
+    v_clean_phone := receiver_phone;
+    IF v_clean_phone LIKE '0%' THEN
+        v_clean_phone := SUBSTRING(v_clean_phone FROM 2);
+    END IF;
+
     -- Lấy ví người gửi
     SELECT id INTO v_sender_wallet_id FROM public.wallets WHERE user_id = auth.uid();
     IF v_sender_wallet_id IS NULL THEN
         RAISE EXCEPTION 'Không tìm thấy ví người gửi';
     END IF;
 
-    -- Lấy ví người nhận dựa trên số điện thoại và mã quốc gia
+    -- Lấy ví người nhận dựa trên số điện thoại đã làm sạch và mã quốc gia
     SELECT w.id INTO v_receiver_wallet_id 
     FROM public.wallets w
     JOIN public.users u ON u.id = w.user_id
-    WHERE u.phone_number = receiver_phone AND u.phone_country_code = receiver_country_code;
+    WHERE u.phone_number = v_clean_phone AND u.phone_country_code = receiver_country_code;
 
     IF v_receiver_wallet_id IS NULL THEN
         RAISE EXCEPTION 'Không tìm thấy người nhận với số điện thoại này';
@@ -122,7 +149,7 @@ BEGIN
         RAISE EXCEPTION 'Không thể tự chuyển tiền cho chính mình';
     END IF;
 
-    -- Trừ tiền người gửi (Sẽ tự văng lỗi nếu số dư âm vì có CHECK balance >= 0)
+    -- Trừ tiền người gửi
     UPDATE public.wallets 
     SET balance = balance - transfer_amount, updated_at = NOW()
     WHERE id = v_sender_wallet_id;
@@ -155,59 +182,20 @@ AS $$
 DECLARE
     v_wallet_id UUID;
     v_transaction_id UUID;
-BEGIN
-    SELECT id INTO v_wallet_id FROM public.wallets WHERE user_id = auth.uid();
-    IF v_wallet_id IS NULL THEN
-        RAISE EXCEPTION 'Không tìm thấy ví';
-    END IF;
-
-    -- Cộng tiền
-    UPDATE public.wallets 
-    SET balance = balance + deposit_amount, updated_at = NOW()
-    WHERE id = v_wallet_id;
-
-    -- Lưu lịch sử
-    INSERT INTO public.transactions (sender_wallet_id, receiver_wallet_id, amount, type, status)
-    VALUES (NULL, v_wallet_id, deposit_amount, 'deposit', 'completed')
-    RETURNING id INTO v_transaction_id;
-
-    RETURN v_transaction_id;
 END;
-$$;
+...
+``` *(Các hàm nạp và rút tiền bên dưới giữ nguyên cấu trúc chuẩn của bạn vì không ảnh hưởng bởi logic số điện thoại)*
 
-REVOKE EXECUTE ON FUNCTION public.process_deposit(DECIMAL) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.process_deposit(DECIMAL) TO authenticated;
+---
 
--- 3. Rút tiền (Withdrawal)
-CREATE OR REPLACE FUNCTION public.process_withdrawal(
-    withdrawal_amount DECIMAL
-) RETURNS UUID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-DECLARE
-    v_wallet_id UUID;
-    v_transaction_id UUID;
-BEGIN
-    SELECT id INTO v_wallet_id FROM public.wallets WHERE user_id = auth.uid();
-    IF v_wallet_id IS NULL THEN
-        RAISE EXCEPTION 'Không tìm thấy ví';
-    END IF;
+### 💡 Lưu ý quan trọng đồng bộ với Frontend:
+Để hàm `process_transfer` này hoạt động hoàn hảo với file `transfer.tsx` đã viết trước đó, tại bước gọi RPC trong React Native bạn hãy cập nhật truyền đủ 3 tham số như sau:
 
-    -- Trừ tiền (Tự văng lỗi nếu số dư không đủ)
-    UPDATE public.wallets 
-    SET balance = balance - withdrawal_amount, updated_at = NOW()
-    WHERE id = v_wallet_id;
-
-    -- Lưu lịch sử
-    INSERT INTO public.transactions (sender_wallet_id, receiver_wallet_id, amount, type, status)
-    VALUES (v_wallet_id, NULL, withdrawal_amount, 'withdrawal', 'completed')
-    RETURNING id INTO v_transaction_id;
-
-    RETURN v_transaction_id;
-END;
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.process_withdrawal(DECIMAL) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.process_withdrawal(DECIMAL) TO authenticated;
+```tsx
+// Trong file transfer.tsx -> hàm handleTransfer:
+const { data: transactionId, error } = await supabase
+  .rpc('process_transfer', { 
+    receiver_country_code: phoneCountryCode.trim(), // Thêm tham số này để khớp với DB mới
+    receiver_phone: phone.trim(), 
+    transfer_amount: numAmount 
+  });

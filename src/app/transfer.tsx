@@ -49,13 +49,26 @@ export default function TransferScreen() {
 
   const fetchWalletBalance = async () => {
     try {
+      // Thêm điều kiện .eq('user_id', ...) để RLS lọc chuẩn xác và đổi thành .maybeSingle()
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
       const { data: wallet, error } = await supabase
         .from('wallets')
         .select('balance')
-        .single();
+        .eq('user_id', user.id) // Đảm bảo lấy đúng ví của user hiện tại
+        .maybeSingle(); // An toàn hơn .single(), không lo bị lỗi Coerce JSON
 
-      if (!error && wallet) {
+      if (error) {
+        console.error("Lỗi truy vấn ví từ Supabase:", error.message);
+        return;
+      }
+
+      if (wallet) {
         setRealBalance(wallet.balance);
+      } else {
+        // Trường hợp tài khoản cũ không có ví, đặt số dư mặc định là 0
+        setRealBalance(0);
       }
     } catch (err) {
       console.error("Lỗi lấy thông tin số dư:", err);

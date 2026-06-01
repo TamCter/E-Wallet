@@ -32,21 +32,29 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Trích xuất thông tin được đồng bộ từ metadata khi đăng ký
+      // SỬA TẠI ĐÂY: Trích xuất chính xác cấu trúc Metadata đã ẩn trong Auth
       const fullName = user.user_metadata?.full_name || 'Người dùng';
-      const phoneNumber = user.user_metadata?.phone_number || 'Chưa cập nhật';
+      const countryCode = user.user_metadata?.phone_country_code || '';
+      const phoneNum = user.user_metadata?.phone_number || '';
+
+      // Khâu xử lý hiển thị: Ghép mã quốc gia với số điện thoại (Ví dụ: +84 987654321)
+      const phoneNumber = countryCode ? `${countryCode} ${phoneNum}` : phoneNum || 'Chưa cập nhật';
+
       setUserData({ fullName, phoneNumber });
 
-      // 2. Lấy thông tin ví (Số dư) từ bảng 'wallets'
+      // 2. Lấy thông tin ví (Số dư) từ bảng 'wallets' dựa trên ID người dùng hiện tại
       const { data: wallet, error: walletError } = await supabase
         .from('wallets')
         .select('balance')
-        .single(); // Nhờ cơ chế RLS chỉ lấy được ví của user này
+        .eq('user_id', user.id) // Lọc chính xác theo ID người dùng đang đăng nhập
+        .maybeSingle();        // Đổi .single() thành .maybeSingle() để an toàn dữ liệu, chống crash Coerce JSON
 
       if (walletError) {
         console.error('Lỗi lấy số dư ví:', walletError.message);
       } else if (wallet) {
         setBalance(wallet.balance); // Gán số dư thực tế
+      } else {
+        setBalance(0); // Mặc định nếu chưa đồng bộ kịp ví
       }
 
     } catch (error) {

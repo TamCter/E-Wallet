@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { AuthInput } from '@/components/ui/AuthInput';
 import { supabase } from '@/lib/supabase';
-import { Alert } from 'react-native';
 
 export default function LoginScreen() {
   const router = useRouter();

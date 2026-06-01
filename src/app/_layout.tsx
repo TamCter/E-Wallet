@@ -15,15 +15,18 @@ function RootLayoutNav() {
   useEffect(() => {
     if (!navigationState?.key || loading) return;
 
-    const inTabsGroup = segments[0] === '(tabs)';
+    const guestOnlyScreens = ['login', 'register', 'onboarding', 'index'];
+    const publicScreens = ['reset-password', 'otp-verification', 'forgot-password'];
     
-    // Nếu chưa đăng nhập và đang cố vào màn hình chính
-    if (!session && inTabsGroup) {
+    const isGuestOnly = guestOnlyScreens.includes(segments[0] || '');
+    const isPublic = publicScreens.includes(segments[0] || '');
+    
+    // Nếu chưa đăng nhập và cố truy cập màn hình cần bảo vệ (không phải guest-only và không phải public)
+    if (!session && !isGuestOnly && !isPublic) {
       router.replace('/login');
     } 
-    // Nếu đã đăng nhập và đang ở màn hình ngoài (login, register, onboarding...)
-    else if (session && !inTabsGroup) {
-      // Cho phép ở màn hình reset password nếu cần, ở đây tạm thời chuyển vào app luôn
+    // Nếu đã đăng nhập và đang cố truy cập màn hình guest-only (login, register, onboarding, index)
+    else if (session && isGuestOnly) {
       router.replace('/(tabs)');
     }
   }, [session, loading, segments, router, navigationState?.key]);
@@ -40,6 +43,7 @@ function RootLayoutNav() {
         <Stack.Screen name="otp-verification" />
         <Stack.Screen name="reset-password" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="transfer" />
       </Stack>
     </ThemeProvider>
   );

@@ -7,24 +7,33 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ----------------------------------------------------------------
 // Storage Adapter compatible with Expo Go (mobile) and Web
 // ----------------------------------------------------------------
+const isBrowser = typeof window !== 'undefined';
+
 const storageAdapter = {
   getItem: async (key: string) => {
     if (Platform.OS === 'web') {
-      // Web fallback uses AsyncStorage (which itself uses localStorage under the hood)
-      return AsyncStorage.getItem(key);
+      if (isBrowser) {
+        return AsyncStorage.getItem(key);
+      }
+      return null;
     }
-    // Mobile (iOS/Android) uses SecureStore – encrypted & persistent
     return SecureStore.getItemAsync(key);
   },
   setItem: async (key: string, value: string) => {
     if (Platform.OS === 'web') {
-      return AsyncStorage.setItem(key, value);
+      if (isBrowser) {
+        return AsyncStorage.setItem(key, value);
+      }
+      return;
     }
     return SecureStore.setItemAsync(key, value);
   },
   removeItem: async (key: string) => {
     if (Platform.OS === 'web') {
-      return AsyncStorage.removeItem(key);
+      if (isBrowser) {
+        return AsyncStorage.removeItem(key);
+      }
+      return;
     }
     return SecureStore.deleteItemAsync(key);
   },

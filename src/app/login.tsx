@@ -1,58 +1,23 @@
-import React, { useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
-import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { AuthInput } from '@/components/ui/AuthInput';
-import { supabase } from '@/lib/supabase';
+import { useLoginLogic } from '@/logic/useLoginLogic';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleLogin = async () => {
-    if (loading) return;
-    if (!email) {
-      Alert.alert('Lỗi', 'Vui lòng nhập email');
-      return;
-    }
-    if (!password) {
-      Alert.alert('Lỗi', 'Vui lòng nhập mật khẩu');
-      return;
-    }
-    setLoading(true);
-    try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (signInError) {
-        Alert.alert('Đăng nhập thất bại', signInError.message);
-        return;
-      }
-      // Best-effort: persist email for later use; do not block navigation on failure
-      try {
-        await SecureStore.setItemAsync('lastEmail', email);
-      } catch (storeErr) {
-        console.warn('Could not persist lastEmail:', storeErr);
-      }
-      // Navigate to app tabs
-      router.replace('/(tabs)');
-    } catch (e: any) {
-      Alert.alert('Lỗi', e?.message ?? 'Đã xảy ra lỗi không xác định');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBiometric = () => {
-    // Simulate biometric auth
-    router.replace('/(tabs)');
-  };
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    loading,
+    handleLogin,
+    handleBiometric,
+  } = useLoginLogic();
 
   return (
     <SafeAreaView style={styles.container}>

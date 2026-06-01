@@ -1,84 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { ProfileMenuItem } from '@/components/ui/ProfileMenuItem';
-import { supabase } from '@/lib/supabase';
-import * as SecureStore from 'expo-secure-store';
+import { useProfileLogic } from '@/logic/useProfileLogic';
 
 export default function ProfileScreen() {
-  const router = useRouter();
-
-  // Các state để lưu thông tin người dùng và trạng thái loading
-  const [userData, setUserData] = useState<{ fullName: string; phoneNumber: string } | null>(null);
-  const [balance, setBalance] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    fetchProfileAndWallet();
-  }, []);
-
-  const fetchProfileAndWallet = async () => {
-    try {
-      setIsLoading(true);
-
-      // 1. Lấy thông tin user hiện tại từ Supabase Auth
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-      if (authError || !user) {
-        console.error('Lỗi lấy thông tin Auth hoặc chưa đăng nhập:', authError);
-        router.replace('/login');
-        return;
-      }
-
-      // SỬA TẠI ĐÂY: Trích xuất chính xác cấu trúc Metadata đã ẩn trong Auth
-      const fullName = user.user_metadata?.full_name || 'Người dùng';
-      const countryCode = user.user_metadata?.phone_country_code || '';
-      const phoneNum = user.user_metadata?.phone_number || '';
-
-      // Khâu xử lý hiển thị: Ghép mã quốc gia với số điện thoại (Ví dụ: +84 987654321)
-      const phoneNumber = countryCode ? `${countryCode} ${phoneNum}` : phoneNum || 'Chưa cập nhật';
-
-      setUserData({ fullName, phoneNumber });
-
-      // 2. Lấy thông tin ví (Số dư) từ bảng 'wallets' dựa trên ID người dùng hiện tại
-      const { data: wallet, error: walletError } = await supabase
-        .from('wallets')
-        .select('balance')
-        .eq('user_id', user.id) // Lọc chính xác theo ID người dùng đang đăng nhập
-        .maybeSingle();        // Đổi .single() thành .maybeSingle() để an toàn dữ liệu, chống crash Coerce JSON
-
-      if (walletError) {
-        console.error('Lỗi lấy số dư ví:', walletError.message);
-      } else if (wallet) {
-        setBalance(wallet.balance); // Gán số dư thực tế
-      } else {
-        setBalance(0); // Mặc định nếu chưa đồng bộ kịp ví
-      }
-
-    } catch (error) {
-      console.error('Đã xảy ra lỗi hệ thống khi tải profile:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      // Clear Supabase session
-      await supabase.auth.signOut();
-      // Clear any stored tokens (SecureStore)
-      if (Platform.OS !== 'web') {
-        await SecureStore.deleteItemAsync('supabase.auth.token');
-      }
-      // Navigate only after successful sign-out
-      router.replace('/login');
-    } catch (e) {
-      console.error('Logout error', e);
-      // Do not navigate if sign-out failed
-    }
-  };
+  const { userData, balance, isLoading, handleLogout } = useProfileLogic();
 
   // Định dạng số tiền thành chuỗi hiển thị tiền tệ Việt Nam (Ví dụ: 12,500,000)
   const formatCurrency = (amount: number) => {

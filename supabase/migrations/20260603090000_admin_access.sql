@@ -1,47 +1,27 @@
--- Database Migration: Admin Access Policies
--- This script configures permissions to allow the admin account (admin@gmail.com)
--- to view all users, all wallets, and modify user wallet balances.
-
--- 1. Grant SELECT on public.users to authenticated roles (Rely on RLS to restrict standard users)
-GRANT SELECT ON public.users TO authenticated;
+-- 1. Grant table privileges explicitly to authenticated and service_role roles
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.wallets TO authenticated, service_role;
+GRANT USAGE ON SCHEMA public TO authenticated, anon, service_role;
 
 -- 2. User Table Policies
 DROP POLICY IF EXISTS "Allow admin to select all profiles" ON public.users;
 CREATE POLICY "Allow admin to select all profiles" ON public.users 
     FOR SELECT 
     TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM auth.users 
-            WHERE auth.users.id = auth.uid() 
-              AND auth.users.email = 'admin@gmail.com'
-        )
-    );
+    USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
 
 -- 3. Wallet Table Policies
 DROP POLICY IF EXISTS "Allow admin to select all wallets" ON public.wallets;
 CREATE POLICY "Allow admin to select all wallets" ON public.wallets 
     FOR SELECT 
     TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM auth.users 
-            WHERE auth.users.id = auth.uid() 
-              AND auth.users.email = 'admin@gmail.com'
-        )
-    );
+    USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
 
 DROP POLICY IF EXISTS "Allow admin to update all wallets" ON public.wallets;
 CREATE POLICY "Allow admin to update all wallets" ON public.wallets 
     FOR UPDATE 
     TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM auth.users 
-            WHERE auth.users.id = auth.uid() 
-              AND auth.users.email = 'admin@gmail.com'
-        )
-    );
+    USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
 
 -- 4. Create default admin account in auth.users if not exists
 -- Uses pgcrypto extension to crypt the password '071020041'

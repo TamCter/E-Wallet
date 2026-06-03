@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 interface UserWithWallet {
   id: string;
@@ -65,6 +66,7 @@ const FALLBACK_USERS: UserWithWallet[] = [
 
 export default function AdminScreen() {
   const router = useRouter();
+  const { session, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'complaints'>('users');
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<UserWithWallet[]>([]);
@@ -78,12 +80,21 @@ export default function AdminScreen() {
   const [updatingBalance, setUpdatingBalance] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!session) {
+      router.replace('/login');
+      return;
+    }
     fetchData();
-  }, []);
+  }, [session, authLoading]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
+      console.log('DEBUG AUTH STATE - session:', !!session, 'email:', session?.user?.email);
+      const { data: authUser, error: authUserError } = await supabase.auth.getUser();
+      console.log('DEBUG authUser:', authUser?.user?.email, 'authUserError:', authUserError?.message);
+
       // 1. Fetch users from public.users
       const { data: dbUsers, error: usersError } = await supabase
         .from('users')

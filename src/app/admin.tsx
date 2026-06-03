@@ -100,8 +100,19 @@ export default function AdminScreen() {
         return;
       }
 
+      // Lọc bỏ tài khoản admin hiện tại ra khỏi danh sách hiển thị quản lý
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const filteredDbUsers = currentUser
+        ? dbUsers.filter(u => u.id !== currentUser.id)
+        : dbUsers;
+
+      if (filteredDbUsers.length === 0) {
+        setUsers(FALLBACK_USERS);
+        return;
+      }
+
       // Merge users with their wallets
-      const merged: UserWithWallet[] = dbUsers.map(u => {
+      const merged: UserWithWallet[] = filteredDbUsers.map(u => {
         const w = dbWallets?.find(wallet => wallet.user_id === u.id);
         const nameClean = u.full_name
           ? u.full_name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '')
@@ -142,14 +153,18 @@ export default function AdminScreen() {
 
     setUpdatingBalance(true);
     try {
-      // Cập nhật Database
-      const { error: updateError } = await supabase
-        .from('wallets')
-        .update({ balance: balanceNum })
-        .eq('user_id', selectedUser.id);
+      const isFallback = selectedUser.id.startsWith('u');
 
-      if (updateError) {
-        console.warn('RLS or connection block. Updating state locally:', updateError.message);
+      if (!isFallback) {
+        // Cập nhật Database ví của đúng user đó
+        const { error: updateError } = await supabase
+          .from('wallets')
+          .update({ balance: balanceNum })
+          .eq('user_id', selectedUser.id);
+
+        if (updateError) {
+          throw new Error(updateError.message);
+        }
       }
 
       // Cập nhật state cục bộ để giao diện đổi ngay lập tức
@@ -160,9 +175,9 @@ export default function AdminScreen() {
       Alert.alert('Thành công', `Đã cập nhật số dư cho ${selectedUser.full_name} thành công!`);
       setIsModalVisible(false);
       setSelectedUser(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      Alert.alert('Lỗi', 'Không thể lưu thay đổi.');
+      Alert.alert('Lỗi', `Không thể lưu thay đổi: ${err.message || err}`);
     } finally {
       setUpdatingBalance(false);
     }

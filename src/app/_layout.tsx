@@ -27,7 +27,12 @@ function RootLayoutNav() {
     } 
     // Nếu đã đăng nhập và đang cố truy cập màn hình guest-only (login, register, onboarding, index)
     else if (session && isGuestOnly) {
-      router.replace('/(tabs)');
+      const isAdmin = session?.user?.email?.toLowerCase() === 'admin@gmail.com';
+      if (isAdmin) {
+        router.replace('/admin');
+      } else {
+        router.replace('/(tabs)');
+      }
     }
   }, [session, loading, segments, router, navigationState?.key]);
 

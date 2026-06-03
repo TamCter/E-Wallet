@@ -10,21 +10,38 @@ DROP POLICY IF EXISTS "Allow admin to select all profiles" ON public.users;
 CREATE POLICY "Allow admin to select all profiles" ON public.users 
     FOR SELECT 
     TO authenticated
-    USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
+    USING (
+        EXISTS (
+            SELECT 1 FROM auth.users 
+            WHERE auth.users.id = auth.uid() 
+              AND auth.users.email = 'admin@gmail.com'
+        )
+    );
 
 -- 3. Wallet Table Policies
 DROP POLICY IF EXISTS "Allow admin to select all wallets" ON public.wallets;
 CREATE POLICY "Allow admin to select all wallets" ON public.wallets 
     FOR SELECT 
     TO authenticated
-    USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
+    USING (
+        EXISTS (
+            SELECT 1 FROM auth.users 
+            WHERE auth.users.id = auth.uid() 
+              AND auth.users.email = 'admin@gmail.com'
+        )
+    );
 
 DROP POLICY IF EXISTS "Allow admin to update all wallets" ON public.wallets;
 CREATE POLICY "Allow admin to update all wallets" ON public.wallets 
     FOR UPDATE 
     TO authenticated
-    USING (auth.jwt() ->> 'email' = 'admin@gmail.com')
-    WITH CHECK (auth.jwt() ->> 'email' = 'admin@gmail.com');
+    USING (
+        EXISTS (
+            SELECT 1 FROM auth.users 
+            WHERE auth.users.id = auth.uid() 
+              AND auth.users.email = 'admin@gmail.com'
+        )
+    );
 
 -- 4. Create default admin account in auth.users if not exists
 -- Uses pgcrypto extension to crypt the password '071020041'

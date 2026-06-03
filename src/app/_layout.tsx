@@ -44,6 +44,9 @@ function RootLayoutNav() {
         <Stack.Screen name="reset-password" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="transfer" />
+        <Stack.Screen name="edit-profile" />
+        <Stack.Screen name="security" />
+        <Stack.Screen name="admin" />
       </Stack>
     </ThemeProvider>
   );

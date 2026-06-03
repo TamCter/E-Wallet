@@ -25,3 +25,35 @@ CREATE POLICY "Allow admin to update all wallets" ON public.wallets
     TO authenticated
     USING (auth.jwt() ->> 'email' = 'admin@gmail.com')
     WITH CHECK (auth.jwt() ->> 'email' = 'admin@gmail.com');
+
+-- 4. Create default admin account in auth.users if not exists
+-- Uses pgcrypto extension to crypt the password '071020041'
+INSERT INTO auth.users (
+    id,
+    instance_id,
+    email,
+    encrypted_password,
+    email_confirmed_at,
+    raw_app_meta_data,
+    raw_user_meta_data,
+    created_at,
+    updated_at,
+    role,
+    aud
+)
+SELECT 
+    '00000000-0000-0000-0000-000000000000'::uuid,
+    '00000000-0000-0000-0000-000000000000'::uuid,
+    'admin@gmail.com',
+    crypt('071020041', gen_salt('bf')),
+    now(),
+    '{"provider": "email", "providers": ["email"]}'::jsonb,
+    '{"full_name": "Quản trị viên", "phone_country_code": "+84", "phone_number": "000000000"}'::jsonb,
+    now(),
+    now(),
+    'authenticated',
+    'authenticated'
+WHERE NOT EXISTS (
+    SELECT 1 FROM auth.users WHERE email = 'admin@gmail.com'
+);
+

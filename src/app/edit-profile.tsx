@@ -116,7 +116,7 @@ export default function EditProfileScreen() {
                     placeholder="901 234 567"
                     placeholderTextColor="#A0A0A0"
                     keyboardType="phone-pad"
-                    value={phoneNumber}
+                    value={phoneNumber ?? ''}
                     onChangeText={setPhoneNumber}
                   />
                   <Ionicons name="checkmark-circle" size={20} color="#2E7D32" style={styles.verifiedIcon} />
@@ -199,11 +199,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.1)',
+      },
+    }),
   },
   headerTitle: {
     fontSize: 18,
@@ -333,11 +342,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0544B3',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0544B3',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0px 4px 6px rgba(5, 68, 179, 0.15)',
+      },
+    }),
   },
   saveButtonDisabled: {
     opacity: 0.6,

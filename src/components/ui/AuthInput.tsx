@@ -24,6 +24,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({ icon, label, isPassword, s
           secureTextEntry={isPassword && !showPassword}
           placeholderTextColor="#A0A0A0"
           {...props}
+          value={props.value ?? ''}
         />
         {isPassword && (
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>

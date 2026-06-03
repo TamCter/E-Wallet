@@ -173,11 +173,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.1)',
+      },
+    }),
   },
   headerTitle: {
     fontSize: 18,
@@ -200,11 +209,20 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.05)',
+      },
+    }),
   },
   biometricsLeft: {
     flexDirection: 'row',
@@ -247,11 +265,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.05)',
+      },
+    }),
   },
   inputGroup: {
     marginBottom: 16,
@@ -296,11 +323,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0544B3',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0544B3',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0px 4px 6px rgba(5, 68, 179, 0.15)',
+      },
+    }),
   },
   submitButtonDisabled: {
     backgroundColor: '#A0BBEB',

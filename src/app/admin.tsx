@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -529,11 +529,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.05)',
+      },
+    }),
   },
   userCardHeader: {
     flexDirection: 'row',
@@ -616,11 +625,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.05)',
+      },
+    }),
   },
   statsCardIcon: {
     marginBottom: 12,
@@ -642,11 +660,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.05)',
+      },
+    }),
   },
   chartTitle: {
     fontSize: 14,
@@ -707,11 +734,20 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     textAlign: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.05)',
+      },
+    }),
   },
   comingSoonTitle: {
     fontSize: 18,
@@ -741,11 +777,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 5,
+      },
+      web: {
+        boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
+      },
+    }),
   },
   modalTitle: {
     fontSize: 18,

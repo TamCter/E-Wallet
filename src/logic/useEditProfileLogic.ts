@@ -67,27 +67,13 @@ export function useEditProfileLogic() {
       return;
     }
 
-    // Phone number validation (7 to 15 digits)
-    let cleanPhone = phoneNumber.replace(/\D/g, '');
-    if (cleanPhone.startsWith('0')) {
-      cleanPhone = cleanPhone.substring(1);
-    }
-
-    const phonePattern = /^\d{7,15}$/;
-    if (!cleanPhone || !phonePattern.test(cleanPhone)) {
-      Alert.alert('Lỗi', 'Số điện thoại không hợp lệ (yêu cầu từ 7 đến 15 chữ số)');
-      return;
-    }
-
     setLoading(true);
 
     try {
-      // 1. Cập nhật Supabase Auth Metadata
+      // 1. Cập nhật Supabase Auth Metadata (bỏ qua thông tin điện thoại đã xác thực)
       const updateData: any = {
         data: {
           full_name: fullName.trim(),
-          phone_country_code: phoneCountryCode,
-          phone_number: cleanPhone,
         }
       };
 
@@ -104,13 +90,11 @@ export function useEditProfileLogic() {
         return;
       }
 
-      // 2. Cập nhật bảng public.users trong Database
+      // 2. Cập nhật bảng public.users trong Database (bỏ qua thông tin điện thoại đã xác thực)
       const { error: dbError } = await supabase
         .from('users')
         .update({
           full_name: fullName.trim(),
-          phone_country_code: phoneCountryCode,
-          phone_number: cleanPhone,
         })
         .eq('id', userId);
 

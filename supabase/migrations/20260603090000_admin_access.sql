@@ -4,6 +4,8 @@ GRANT SELECT, UPDATE ON public.users TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO service_role;
 GRANT SELECT, UPDATE ON public.wallets TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.wallets TO service_role;
+GRANT SELECT ON public.transactions TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.transactions TO service_role;
 GRANT USAGE ON SCHEMA public TO authenticated, anon, service_role;
 
 -- 2. Add email column to public.users if not exists
@@ -70,6 +72,13 @@ CREATE POLICY "Allow admin to select all wallets" ON public.wallets
 DROP POLICY IF EXISTS "Allow admin to update all wallets" ON public.wallets;
 CREATE POLICY "Allow admin to update all wallets" ON public.wallets 
     FOR UPDATE 
+    TO authenticated
+    USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
+
+-- 7. Transaction Table Policies
+DROP POLICY IF EXISTS "Allow admin to select all transactions" ON public.transactions;
+CREATE POLICY "Allow admin to select all transactions" ON public.transactions 
+    FOR SELECT 
     TO authenticated
     USING (auth.jwt() ->> 'email' = 'admin@gmail.com');
 

@@ -16,60 +16,13 @@ interface UserWithWallet {
   balance: number;
 }
 
-const FALLBACK_USERS: UserWithWallet[] = [
-  {
-    id: 'u1',
-    full_name: 'Nguyễn Minh Đức',
-    phone_country_code: '+84',
-    phone_number: '901234567',
-    email: 'minhduc.nguyen@gmail.com',
-    wallet_id: 'w1',
-    balance: 15450000,
-  },
-  {
-    id: 'u2',
-    full_name: 'Trần Thị Thanh Thảo',
-    phone_country_code: '+84',
-    phone_number: '988887766',
-    email: 'thanhthao.tran@gmail.com',
-    wallet_id: 'w2',
-    balance: 8200000,
-  },
-  {
-    id: 'u3',
-    full_name: 'Phạm Hoàng Nam',
-    phone_country_code: '+84',
-    phone_number: '912345678',
-    email: 'hoangnam.pham@gmail.com',
-    wallet_id: 'w3',
-    balance: 450000,
-  },
-  {
-    id: 'u4',
-    full_name: 'Lê Hoài Bảo',
-    phone_country_code: '+84',
-    phone_number: '399888777',
-    email: 'hoaibao.le@gmail.com',
-    wallet_id: 'w4',
-    balance: 23500000,
-  },
-  {
-    id: 'u5',
-    full_name: 'Vũ Minh Anh',
-    phone_country_code: '+84',
-    phone_number: '977665544',
-    email: 'minhanh.vu@gmail.com',
-    wallet_id: 'w5',
-    balance: 0,
-  }
-];
-
 export default function AdminScreen() {
   const router = useRouter();
   const { session, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'complaints'>('users');
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<UserWithWallet[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -94,11 +47,22 @@ export default function AdminScreen() {
         .from('wallets')
         .select('*');
 
+      // 3. Fetch transactions from public.transactions
+      const { data: dbTransactions, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('*');
+
       if (usersError || walletsError) {
         console.warn('Could not fetch complete DB records:', usersError || walletsError);
         setErrorMessage('Không thể truy xuất dữ liệu từ cơ sở dữ liệu.');
         setUsers([]);
         return;
+      }
+
+      if (transactionsError) {
+        console.warn('Could not fetch transaction records:', transactionsError);
+      } else {
+        setTransactions(dbTransactions || []);
       }
 
       if (!dbUsers || dbUsers.length === 0) {
@@ -166,14 +130,6 @@ export default function AdminScreen() {
 
     setUpdatingBalance(true);
     try {
-      const isFallback = selectedUser.id.startsWith('u');
-
-      if (isFallback) {
-        Alert.alert('Lỗi', 'Không thể chỉnh sửa số dư của tài khoản giả lập.');
-        setUpdatingBalance(false);
-        return;
-      }
-
       // Cập nhật Database ví của đúng user đó
       const { data, error: updateError } = await supabase
         .from('wallets')
@@ -228,11 +184,18 @@ export default function AdminScreen() {
     return new Intl.NumberFormat('vi-VN').format(amount);
   };
 
-  // Tính toán thống kê dòng tiền
+  // Tính toán thống kê dòng tiền thực tế từ cơ sở dữ liệu
   const totalMoney = users.reduce((sum, u) => sum + u.balance, 0);
-  const totalTrans = users.length * 3 + 12; // giả lập số giao dịch
-  const totalDeposit = totalMoney * 1.45;
-  const totalWithdraw = totalMoney * 0.45;
+  const totalTrans = transactions.length;
+  const totalDeposit = transactions
+    .filter(t => t.type === 'deposit')
+    .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+  const totalWithdraw = transactions
+    .filter(t => t.type === 'withdrawal')
+    .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+
+  const totalSum = totalDeposit + totalWithdraw;
+  const progressPercent = totalSum > 0 ? (totalDeposit / totalSum) * 100 : 50;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -351,7 +314,7 @@ export default function AdminScreen() {
             </View>
 
             <View style={styles.chartCard}>
-              <Text style={styles.chartTitle}>Cơ cấu dòng tiền ước tính</Text>
+              <Text style={styles.chartTitle}>Cơ cấu dòng tiền thực tế</Text>
               
               <View style={styles.flowRow}>
                 <View style={styles.flowLabelRow}>
@@ -359,7 +322,7 @@ export default function AdminScreen() {
                   <Text style={styles.flowVal}>{formatCurrency(totalDeposit)} VND</Text>
                 </View>
                 <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: '70%', backgroundColor: '#2E7D32' }]} />
+                  <View style={[styles.progressBarFill, { width: `${progressPercent}%`, backgroundColor: '#2E7D32' }]} />
                 </View>
               </View>
 
@@ -369,7 +332,7 @@ export default function AdminScreen() {
                   <Text style={styles.flowVal}>{formatCurrency(totalWithdraw)} VND</Text>
                 </View>
                 <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: '30%', backgroundColor: '#C62828' }]} />
+                  <View style={[styles.progressBarFill, { width: `${100 - progressPercent}%`, backgroundColor: '#C62828' }]} />
                 </View>
               </View>
             </View>

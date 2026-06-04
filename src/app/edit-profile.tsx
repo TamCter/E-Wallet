@@ -108,18 +108,20 @@ export default function EditProfileScreen() {
                   renderLeftIcon={() => (
                     <Ionicons name="call-outline" size={16} color="#A0A0A0" style={{ marginRight: 4 }} />
                   )}
+                  disable={true}
                 />
 
-                <View style={styles.phoneNumberInputContainer}>
+                <View style={[styles.phoneNumberInputContainer, { backgroundColor: '#F5F5F5' }]}>
                   <TextInput
-                    style={styles.phoneNumberInput}
+                    style={[styles.phoneNumberInput, { color: '#666' }]}
                     placeholder="901 234 567"
                     placeholderTextColor="#A0A0A0"
                     keyboardType="phone-pad"
                     value={phoneNumber ?? ''}
                     onChangeText={setPhoneNumber}
+                    editable={false}
                   />
-                  <Ionicons name="checkmark-circle" size={20} color="#2E7D32" style={styles.verifiedIcon} />
+                  <Ionicons name="checkmark-circle" size={20} color="#A0A0A0" style={styles.verifiedIcon} />
                 </View>
               </View>
               <Text style={styles.phoneHelperText}>Số điện thoại đã xác thực không thể thay đổi</Text>

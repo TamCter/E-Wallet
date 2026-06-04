@@ -21,17 +21,23 @@ function RootLayoutNav() {
     const isGuestOnly = guestOnlyScreens.includes(segments[0] || '');
     const isPublic = publicScreens.includes(segments[0] || '');
     
+    const isAdmin = session?.user?.email?.toLowerCase() === 'admin@gmail.com';
+    const isAdminScreen = segments[0] === 'admin';
+
     // Nếu chưa đăng nhập và cố truy cập màn hình cần bảo vệ (không phải guest-only và không phải public)
     if (!session && !isGuestOnly && !isPublic) {
       router.replace('/login');
     } 
-    // Nếu đã đăng nhập và đang cố truy cập màn hình guest-only (login, register, onboarding, index)
-    else if (session && isGuestOnly) {
-      const isAdmin = session?.user?.email?.toLowerCase() === 'admin@gmail.com';
-      if (isAdmin) {
-        router.replace('/admin');
-      } else {
+    // Nếu đã đăng nhập
+    else if (session) {
+      if (isAdminScreen && !isAdmin) {
         router.replace('/(tabs)');
+      } else if (isGuestOnly) {
+        if (isAdmin) {
+          router.replace('/admin');
+        } else {
+          router.replace('/(tabs)');
+        }
       }
     }
   }, [session, loading, segments, router, navigationState?.key]);

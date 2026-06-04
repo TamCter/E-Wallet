@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -72,6 +72,7 @@ export default function AdminScreen() {
   const [users, setUsers] = useState<UserWithWallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Modal edit balance states
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -79,22 +80,10 @@ export default function AdminScreen() {
   const [newBalanceText, setNewBalanceText] = useState('');
   const [updatingBalance, setUpdatingBalance] = useState(false);
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!session) {
-      router.replace('/login');
-      return;
-    }
-    fetchData();
-  }, [session, authLoading]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
+    setErrorMessage(null);
     try {
-      console.log('DEBUG AUTH STATE - session:', !!session, 'email:', session?.user?.email);
-      const { data: authUser, error: authUserError } = await supabase.auth.getUser();
-      console.log('DEBUG authUser:', authUser?.user?.email, 'authUserError:', authUserError?.message);
-
       // 1. Fetch users from public.users
       const { data: dbUsers, error: usersError } = await supabase
         .from('users')
@@ -105,35 +94,38 @@ export default function AdminScreen() {
         .from('wallets')
         .select('*');
 
-      if (usersError || walletsError || !dbUsers || dbUsers.length === 0) {
-        console.warn('Could not fetch complete DB records or empty, using fallbacks:', usersError || walletsError);
-        setUsers(FALLBACK_USERS);
+      if (usersError || walletsError) {
+        console.warn('Could not fetch complete DB records:', usersError || walletsError);
+        setErrorMessage('Không thể truy xuất dữ liệu từ cơ sở dữ liệu.');
+        setUsers([]);
+        return;
+      }
+
+      if (!dbUsers || dbUsers.length === 0) {
+        setUsers([]);
         return;
       }
 
       // Lọc bỏ tài khoản admin hiện tại ra khỏi danh sách hiển thị quản lý
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const currentUser = session?.user;
       const filteredDbUsers = currentUser
         ? dbUsers.filter(u => u.id !== currentUser.id)
         : dbUsers;
 
       if (filteredDbUsers.length === 0) {
-        setUsers(FALLBACK_USERS);
+        setUsers([]);
         return;
       }
 
       // Merge users with their wallets
       const merged: UserWithWallet[] = filteredDbUsers.map(u => {
         const w = dbWallets?.find(wallet => wallet.user_id === u.id);
-        const nameClean = u.full_name
-          ? u.full_name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '')
-          : 'user';
         return {
           id: u.id,
           full_name: u.full_name || 'Người dùng',
           phone_country_code: u.phone_country_code || '+84',
           phone_number: u.phone_number || '',
-          email: `${nameClean}@gmail.com`,
+          email: u.email || 'unknown',
           wallet_id: w?.id || '',
           balance: w ? parseFloat(w.balance) : 0,
         };
@@ -142,11 +134,21 @@ export default function AdminScreen() {
       setUsers(merged);
     } catch (e) {
       console.error('Error fetching admin data:', e);
-      setUsers(FALLBACK_USERS);
+      setErrorMessage('Đã xảy ra lỗi trong quá trình tải dữ liệu.');
+      setUsers([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [session]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!session) {
+      router.replace('/login');
+      return;
+    }
+    fetchData();
+  }, [session, authLoading, fetchData]);
 
   const handleOpenEditBalance = (user: UserWithWallet) => {
     setSelectedUser(user);
@@ -166,16 +168,27 @@ export default function AdminScreen() {
     try {
       const isFallback = selectedUser.id.startsWith('u');
 
-      if (!isFallback) {
-        // Cập nhật Database ví của đúng user đó
-        const { error: updateError } = await supabase
-          .from('wallets')
-          .update({ balance: balanceNum })
-          .eq('user_id', selectedUser.id);
+      if (isFallback) {
+        Alert.alert('Lỗi', 'Không thể chỉnh sửa số dư của tài khoản giả lập.');
+        setUpdatingBalance(false);
+        return;
+      }
 
-        if (updateError) {
-          throw new Error(updateError.message);
-        }
+      // Cập nhật Database ví của đúng user đó
+      const { data, error: updateError } = await supabase
+        .from('wallets')
+        .update({ balance: balanceNum })
+        .eq('user_id', selectedUser.id)
+        .select();
+
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
+
+      if (!data || data.length === 0) {
+        Alert.alert('Lỗi', 'Không có tài khoản nào được cập nhật số dư.');
+        setUpdatingBalance(false);
+        return;
       }
 
       // Cập nhật state cục bộ để giao diện đổi ngay lập tức
@@ -281,7 +294,12 @@ export default function AdminScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollList} showsVerticalScrollIndicator={false}>
-              {filteredUsers.length === 0 ? (
+              {errorMessage ? (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="alert-circle-outline" size={48} color="#D32F2F" />
+                  <Text style={[styles.emptyText, { color: '#D32F2F', marginTop: 8 }]}>{errorMessage}</Text>
+                </View>
+              ) : filteredUsers.length === 0 ? (
                 <View style={styles.emptyContainer}>
                   <Ionicons name="people-outline" size={48} color="#D0D0D0" />
                   <Text style={styles.emptyText}>Không tìm thấy người dùng phù hợp</Text>

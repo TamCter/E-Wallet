@@ -45,41 +45,11 @@ export function useLoginLogic() {
     setLoading(true);
     setErrorMessage(null);
 
-    const isAdmin = email.trim().toLowerCase() === 'admin@gmail.com' && password === '071020041';
-
     try {
-      let { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
-
-      // Nếu đăng nhập admin thất bại do chưa có tài khoản, tự động đăng ký tài khoản admin
-      if (signInError && isAdmin && signInError.message === 'Invalid login credentials') {
-        console.log('Admin account does not exist. Auto-creating admin user...');
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: 'admin@gmail.com',
-          password: '071020041',
-          options: {
-            data: {
-              full_name: 'Quản trị viên',
-              phone_country_code: '+84',
-              phone_number: '000000000',
-            }
-          }
-        });
-
-        if (!signUpError) {
-          // Đăng ký thành công, thử đăng nhập lại lần nữa
-          const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-            email: 'admin@gmail.com',
-            password: '071020041',
-          });
-          signInError = retryError;
-          authData = retryData;
-        } else {
-          signInError = signUpError;
-        }
-      }
 
       if (signInError) {
         let errMsg = signInError.message;
@@ -102,17 +72,14 @@ export function useLoginLogic() {
         console.warn('Could not persist lastEmail:', storeErr);
       }
 
-      if (isAdmin) {
+      const isUserAdmin = authData.user?.email?.toLowerCase() === 'admin@gmail.com';
+      if (isUserAdmin) {
         router.replace('/admin');
       } else {
         router.replace('/(tabs)');
       }
     } catch (e: any) {
-      if (isAdmin) {
-        router.replace('/admin');
-      } else {
-        setErrorMessage(e?.message ?? 'Đã xảy ra lỗi không xác định');
-      }
+      setErrorMessage(e?.message ?? 'Đã xảy ra lỗi không xác định');
     } finally {
       setLoading(false);
     }

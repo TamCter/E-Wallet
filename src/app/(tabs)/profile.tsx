@@ -2,11 +2,18 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import { ProfileMenuItem } from '@/components/ui/ProfileMenuItem';
 import { useProfileLogic } from '@/logic/useProfileLogic';
 
 export default function ProfileScreen() {
-  const { userData, balance, isLoading, handleLogout } = useProfileLogic();
+  const { userData, balance, isLoading, router, fetchProfileAndWallet, handleLogout } = useProfileLogic();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchProfileAndWallet();
+    }, [])
+  );
 
   // Định dạng số tiền thành chuỗi hiển thị tiền tệ Việt Nam (Ví dụ: 12,500,000)
   const formatCurrency = (amount: number) => {
@@ -42,7 +49,7 @@ export default function ProfileScreen() {
                 <View style={styles.avatarPlaceholder}>
                   <Ionicons name="person" size={48} color="#0544B3" />
                 </View>
-                <TouchableOpacity style={styles.editBadge}>
+                <TouchableOpacity style={styles.editBadge} onPress={() => router.push('/edit-profile')}>
                   <Ionicons name="pencil" size={12} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -73,11 +80,16 @@ export default function ProfileScreen() {
             {/* Settings Menu */}
             <Text style={styles.sectionTitle}>CÀI ĐẶT TÀI KHOẢN</Text>
             <View style={styles.menuGroup}>
-              <ProfileMenuItem title="Thông tin cá nhân" icon="person-outline" />
+              <ProfileMenuItem
+                title="Thông tin cá nhân"
+                icon="person-outline"
+                onPress={() => router.push('/edit-profile')}
+              />
               <ProfileMenuItem
                 title="Bảo mật & Quyền riêng tư"
                 subtitle="Mật khẩu, Sinh trắc học"
                 icon="shield-checkmark-outline"
+                onPress={() => router.push('/security')}
               />
               <ProfileMenuItem
                 title="Ngân hàng liên kết"

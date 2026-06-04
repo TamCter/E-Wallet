@@ -1,0 +1,38 @@
+# E-Wallet Expo Application - Requirements & Setup Instructions
+
+## Essential Dependencies (Packages to download/install)
+Run the following command at the root of the `ewallet` directory:
+
+```bash
+# Install core packages and dependencies
+npm install @supabase/supabase-js react-native-element-dropdown expo-secure-store react-native-safe-area-context expo-router @react-native-async-storage/async-storage
+```
+
+## System Requirements
+- Node.js: >= v18
+- npm: >= v9
+- Expo CLI (managed workflow via Expo SDK 56)
+- Supabase account and set up database
+
+## Running the Application
+Ensure your environment variables are configured in `.env` (using the template in `.env.example`).
+
+```bash
+# Start Expo development server (Expo Go)
+npm run start
+
+# Run on Android emulator/device
+npm run android
+
+# Run on iOS simulator/device
+npm run ios
+
+# Run on web browser
+npm run web
+```
+
+## Key Database Tables Required:
+1. `public.users` (linked to `auth.users` metadata)
+2. `public.wallets` (stores balance)
+3. `public.transactions` (stores transaction history)
+Refer to `supabase/migrations/20240527000000_init_schema.sql` for the SQL database structure.

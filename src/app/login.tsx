@@ -15,6 +15,7 @@ export default function LoginScreen() {
     password,
     setPassword,
     loading,
+    errorMessage,
     handleLogin,
     handleBiometric,
   } = useLoginLogic();
@@ -57,6 +58,13 @@ export default function LoginScreen() {
               value={password}
               onChangeText={setPassword}
             />
+
+            {errorMessage && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle-outline" size={16} color="#D32F2F" />
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            )}
 
             <Button
               title="Đăng nhập"
@@ -191,5 +199,23 @@ const styles = StyleSheet.create({
     color: '#0544B3',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFEbee',
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorText: {
+    color: '#D32F2F',
+    fontSize: 13,
+    marginLeft: 6,
+    fontWeight: '600',
   },
 });

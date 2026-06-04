@@ -91,14 +91,23 @@ export function useEditProfileLogic() {
       }
 
       // 2. Cập nhật bảng public.users trong Database (bỏ qua thông tin điện thoại đã xác thực)
+      const userUpdatePayload: any = {
+        full_name: fullName.trim(),
+      };
+      if (currentEmail.trim() !== email) {
+        userUpdatePayload.email = currentEmail.trim();
+      }
+
       const { error: dbError } = await supabase
         .from('users')
-        .update({
-          full_name: fullName.trim(),
-        })
+        .update(userUpdatePayload)
         .eq('id', userId);
 
       if (dbError) {
+        // Rollback Auth email change if DB update fails
+        if (currentEmail.trim() !== email) {
+          await supabase.auth.updateUser({ email: email });
+        }
         Alert.alert('Lỗi cơ sở dữ liệu', dbError.message);
         setLoading(false);
         return;
@@ -131,9 +140,7 @@ export function useEditProfileLogic() {
     fullName,
     setFullName,
     phoneCountryCode,
-    setPhoneCountryCode,
     phoneNumber,
-    setPhoneNumber,
     email: currentEmail,
     setEmail: setCurrentEmail,
     loading,

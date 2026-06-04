@@ -14,9 +14,7 @@ export default function EditProfileScreen() {
     fullName,
     setFullName,
     phoneCountryCode,
-    setPhoneCountryCode,
     phoneNumber,
-    setPhoneNumber,
     email,
     setEmail,
     loading,
@@ -101,10 +99,7 @@ export default function EditProfileScreen() {
                   value={phoneCountryCode}
                   onFocus={() => setIsFocus(true)}
                   onBlur={() => setIsFocus(false)}
-                  onChange={item => {
-                    setPhoneCountryCode(item.value);
-                    setIsFocus(false);
-                  }}
+                   onChange={() => {}}
                   renderLeftIcon={() => (
                     <Ionicons name="call-outline" size={16} color="#A0A0A0" style={{ marginRight: 4 }} />
                   )}
@@ -118,7 +113,6 @@ export default function EditProfileScreen() {
                     placeholderTextColor="#A0A0A0"
                     keyboardType="phone-pad"
                     value={phoneNumber ?? ''}
-                    onChangeText={setPhoneNumber}
                     editable={false}
                   />
                   <Ionicons name="checkmark-circle" size={20} color="#A0A0A0" style={styles.verifiedIcon} />

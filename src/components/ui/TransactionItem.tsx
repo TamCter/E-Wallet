@@ -9,6 +9,7 @@ interface TransactionItemProps {
   icon: keyof typeof Ionicons.glyphMap;
   iconBgColor: string;
   iconColor: string;
+  displayAmount?: string;
 }
 
 export const TransactionItem: React.FC<TransactionItemProps> = ({
@@ -18,8 +19,9 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   icon,
   iconBgColor,
   iconColor,
+  displayAmount,
 }) => {
-  const formattedAmount = amount > 0 ? `+$${amount.toFixed(2)}` : `-$${Math.abs(amount).toFixed(2)}`;
+  const formattedAmount = displayAmount || (amount > 0 ? `+$${amount.toFixed(2)}` : `-$${Math.abs(amount).toFixed(2)}`);
   const amountColor = amount > 0 ? '#00A86B' : '#1a1a1a';
 
   return (

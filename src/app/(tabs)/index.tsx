@@ -1,13 +1,34 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { TransactionItem } from '@/components/ui/TransactionItem';
+import { useHomeLogic } from '@/logic/useHomeLogic';
 
 export default function HomepageScreen() {
-  const [showBalance, setShowBalance] = useState(true);
   const router = useRouter();
+  const {
+    userData,
+    balance,
+    showBalance,
+    setShowBalance,
+    isLoading,
+    recentTransactions,
+    weeklyNetFlow,
+    weeklyChartBars,
+    fetchHomeData,
+  } = useHomeLogic();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchHomeData();
+    }, [fetchHomeData])
+  );
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN').format(amount);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -19,8 +40,8 @@ export default function HomepageScreen() {
               <Ionicons name="person" size={24} color="#0544B3" />
             </View>
             <View>
-              <Text style={styles.greeting}>Welcome back,</Text>
-              <Text style={styles.userName}>Digital Wallet</Text>
+              <Text style={styles.greeting}>Xin chào,</Text>
+              <Text style={styles.userName}>{userData?.fullName || 'Người dùng'}</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.bellButton}>
@@ -32,86 +53,77 @@ export default function HomepageScreen() {
         {/* Balance Card */}
         <View style={styles.balanceCard}>
           <View style={styles.balanceHeader}>
-            <Text style={styles.balanceLabel}>AVAILABLE BALANCE</Text>
+            <Text style={styles.balanceLabel}>SỐ DƯ KHẢ DỤNG</Text>
             <TouchableOpacity onPress={() => setShowBalance(!showBalance)}>
               <Ionicons name={showBalance ? "eye-outline" : "eye-off-outline"} size={20} color="#fff" />
             </TouchableOpacity>
           </View>
           <Text style={styles.balanceAmount}>
-            {showBalance ? '$12,450.00' : '********'}
+            {showBalance ? `${formatCurrency(balance)} VND` : '********'}
           </Text>
           
           <View style={styles.cardActions}>
-            <TouchableOpacity style={styles.cardButton}>
+            <TouchableOpacity style={styles.cardButton} onPress={() => {}}>
               <Ionicons name="add" size={20} color="#0544B3" />
-              <Text style={styles.cardButtonText}>Top Up</Text>
+              <Text style={styles.cardButtonText}>Nạp tiền</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.cardButtonOutline}>
+            <TouchableOpacity style={styles.cardButtonOutline} onPress={() => router.push('/transfer' as any)}>
               <Ionicons name="arrow-up" size={20} color="#fff" />
-              <Text style={styles.cardButtonOutlineText}>Withdraw</Text>
+              <Text style={styles.cardButtonOutlineText}>Chuyển tiền</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <ActionIcon icon="paper-plane-outline" label="Transfer" onPress={() => router.push('/transfer' as any)} />
-          <ActionIcon icon="qr-code-outline" label="Scan QR" />
-          <ActionIcon icon="phone-portrait-outline" label="Mobile" />
-          <ActionIcon icon="receipt-outline" label="Bills" />
+          <ActionIcon icon="paper-plane-outline" label="Chuyển tiền" onPress={() => router.push('/transfer' as any)} />
+          <ActionIcon icon="qr-code-outline" label="Quét mã QR" />
+          <ActionIcon icon="phone-portrait-outline" label="Nạp ĐT" />
+          <ActionIcon icon="receipt-outline" label="Hóa đơn" />
         </View>
 
         {/* Weekly Flow Chart */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Weekly Flow</Text>
+            <Text style={styles.sectionTitle}>Biến động tuần này</Text>
             <View style={styles.badgePositive}>
-              <Text style={styles.badgePositiveText}>+$650.00</Text>
+              <Text style={styles.badgePositiveText}>{weeklyNetFlow}</Text>
             </View>
           </View>
           <View style={styles.chartContainer}>
-            {/* Simple mock bar chart */}
-            <ChartBar day="Mon" height={60} />
-            <ChartBar day="Tue" height={100} />
-            <ChartBar day="Wed" height={40} />
-            <ChartBar day="Thu" height={120} />
-            <ChartBar day="Fri" height={80} />
+            {weeklyChartBars.map((bar, index) => (
+              <ChartBar key={index} day={bar.day} height={bar.height} />
+            ))}
           </View>
         </View>
 
         {/* Recent Transactions */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Transactions</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
+            <Text style={styles.sectionTitle}>Giao dịch gần đây</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/history' as any)}>
+              <Text style={styles.seeAllText}>Xem tất cả</Text>
             </TouchableOpacity>
           </View>
           
-          <TransactionItem
-            title="Starbucks"
-            subtitle="Today, 08:30 AM"
-            amount={-5.40}
-            icon="cafe-outline"
-            iconBgColor="#FFE8E8"
-            iconColor="#D32F2F"
-          />
-          <TransactionItem
-            title="Salary Deposit"
-            subtitle="Yesterday, 09:00 AM"
-            amount={3200.00}
-            icon="briefcase-outline"
-            iconBgColor="#E8F5E9"
-            iconColor="#388E3C"
-          />
-          <TransactionItem
-            title="Grocery Store"
-            subtitle="Oct 24, 18:45 PM"
-            amount={-142.50}
-            icon="cart-outline"
-            iconBgColor="#F5F5F5"
-            iconColor="#616161"
-          />
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#0544B3" style={{ paddingVertical: 12 }} />
+          ) : recentTransactions.length === 0 ? (
+            <Text style={styles.noTransactionsText}>Chưa có giao dịch nào gần đây</Text>
+          ) : (
+            recentTransactions.map((tx) => (
+              <TransactionItem
+                key={tx.id}
+                title={tx.title}
+                subtitle={tx.subtitle}
+                amount={tx.amount}
+                displayAmount={tx.displayAmount}
+                icon={tx.iconName as any}
+                iconBgColor={tx.iconBgColor}
+                iconColor={tx.iconColor}
+              />
+            ))
+          )}
         </View>
 
       </ScrollView>
@@ -132,7 +144,7 @@ const ActionIcon = ({ icon, label, onPress }: { icon: any, label: string, onPres
 const ChartBar = ({ day, height }: { day: string, height: number }) => (
   <View style={styles.chartBarWrapper}>
     <View style={styles.chartBarBg}>
-      <View style={[styles.chartBarFill, { height: `${(height / 150) * 100}%` }]} />
+      <View style={[styles.chartBarFill, { height: `${height}%` }]} />
     </View>
     <Text style={styles.chartDay}>{day}</Text>
   </View>
@@ -342,5 +354,11 @@ const styles = StyleSheet.create({
   chartDay: {
     fontSize: 12,
     color: '#A0A0A0',
+  },
+  noTransactionsText: {
+    color: '#A0A0A0',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingVertical: 16,
   },
 });

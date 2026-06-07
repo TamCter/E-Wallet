@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { TransactionItem } from '@/components/ui/TransactionItem';
 import { useHomeLogic } from '@/logic/useHomeLogic';
+import { useNotificationsLogic } from '@/logic/useNotificationsLogic';
 
 export default function HomepageScreen() {
   const router = useRouter();
@@ -19,6 +20,8 @@ export default function HomepageScreen() {
     weeklyChartBars,
     fetchHomeData,
   } = useHomeLogic();
+
+  const { hasUnread } = useNotificationsLogic();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -44,9 +47,9 @@ export default function HomepageScreen() {
               <Text style={styles.userName}>{userData?.fullName || 'Người dùng'}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.bellButton}>
+          <TouchableOpacity style={styles.bellButton} onPress={() => router.push('/notifications' as any)}>
             <Ionicons name="notifications-outline" size={24} color="#1a1a1a" />
-            <View style={styles.notificationDot} />
+            {hasUnread && <View style={styles.notificationDot} />}
           </TouchableOpacity>
         </View>
 

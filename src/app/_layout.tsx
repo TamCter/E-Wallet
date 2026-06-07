@@ -57,6 +57,7 @@ function RootLayoutNav() {
         <Stack.Screen name="transfer" />
         <Stack.Screen name="edit-profile" />
         <Stack.Screen name="security" />
+        <Stack.Screen name="notifications" />
         <Stack.Screen name="admin" />
       </Stack>
     </ThemeProvider>

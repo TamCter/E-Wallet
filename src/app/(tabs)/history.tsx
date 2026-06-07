@@ -16,7 +16,9 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useHistoryLogic, FormattedTransaction, FilterType } from '@/logic/useHistoryLogic';
+import { useNotificationsLogic } from '@/logic/useNotificationsLogic';
 
 interface FilterOption {
   label: string;
@@ -33,6 +35,8 @@ const FILTER_OPTIONS: FilterOption[] = [
 ];
 
 export default function HistoryScreen() {
+  const router = useRouter();
+  const { hasUnread } = useNotificationsLogic();
   const {
     groupedTransactions,
     loading,
@@ -90,7 +94,7 @@ export default function HistoryScreen() {
 
   const renderTransactionItem = ({ item }: { item: FormattedTransaction }) => {
     const amountColor = item.isIncoming ? '#00A86B' : '#1a1a1a';
-    
+
     return (
       <TouchableOpacity
         style={styles.itemCard}
@@ -108,7 +112,7 @@ export default function HistoryScreen() {
             <Text style={styles.itemSubtitle}>{item.subtitle}</Text>
           </View>
         </View>
-        
+
         <View style={styles.itemRight}>
           <Text style={[styles.itemAmount, { color: amountColor }]}>
             {item.displayAmount}
@@ -131,17 +135,6 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTitleContainer}>
-          <Ionicons name={Platform.OS === 'ios' ? 'wallet-outline' : 'wallet'} size={24} color="#0544B3" style={{ marginRight: 8 }} />
-          <Text style={styles.headerTitle}>Digital Wallet</Text>
-        </View>
-        <TouchableOpacity style={styles.bellButton}>
-          <Ionicons name="notifications-outline" size={24} color="#0544B3" />
-        </TouchableOpacity>
-      </View>
-
       {/* Search Box */}
       <View style={styles.searchContainer}>
         <Ionicons name="search-outline" size={20} color="#A0A0A0" style={styles.searchIcon} />
@@ -247,7 +240,7 @@ export default function HistoryScreen() {
                     <Ionicons name={selectedTx.iconName as any} size={36} color={selectedTx.iconColor} />
                   </View>
                   <Text style={styles.modalTxTitle}>{selectedTx.title}</Text>
-                  
+
                   {/* Amount */}
                   <Text style={[styles.modalAmount, { color: selectedTx.isIncoming ? '#00A86B' : '#1a1a1a' }]}>
                     {selectedTx.displayAmount}
@@ -289,11 +282,11 @@ export default function HistoryScreen() {
                   {selectedTx.type === 'transfer' && (
                     <>
                       <View style={styles.divider} />
-                      
+
                       <View style={styles.detailRow}>
                         <Text style={styles.detailLabel}>Người gửi</Text>
                         <Text style={styles.detailValue}>
-                          {selectedTx.rawSender?.full_name || 'Hệ thống'} 
+                          {selectedTx.rawSender?.full_name || 'Hệ thống'}
                           {selectedTx.rawSender?.phone_number && ` (${selectedTx.rawSender.phone_country_code}${selectedTx.rawSender.phone_number})`}
                         </Text>
                       </View>
@@ -639,5 +632,16 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#D32F2F',
+    borderWidth: 1,
+    borderColor: '#ffffff',
   },
 });

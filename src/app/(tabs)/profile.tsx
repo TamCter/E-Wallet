@@ -5,9 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { ProfileMenuItem } from '@/components/ui/ProfileMenuItem';
 import { useProfileLogic } from '@/logic/useProfileLogic';
+import { useNotificationsLogic } from '@/logic/useNotificationsLogic';
 
 export default function ProfileScreen() {
   const { userData, balance, isLoading, router, fetchProfileAndWallet, handleLogout } = useProfileLogic();
+  const { hasUnread } = useNotificationsLogic();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -29,9 +31,9 @@ export default function ProfileScreen() {
             <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Hồ sơ cá nhân</Text>
-          <TouchableOpacity style={styles.bellButton}>
+          <TouchableOpacity style={styles.bellButton} onPress={() => router.push('/notifications' as any)}>
             <Ionicons name="notifications-outline" size={24} color="#1a1a1a" />
-            <View style={styles.notificationDot} />
+            {hasUnread && <View style={styles.notificationDot} />}
           </TouchableOpacity>
         </View>
 

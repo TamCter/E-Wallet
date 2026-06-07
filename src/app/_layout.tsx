@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { NotificationsProvider } from '@/context/NotificationsContext';
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
@@ -57,6 +58,7 @@ function RootLayoutNav() {
         <Stack.Screen name="transfer" />
         <Stack.Screen name="edit-profile" />
         <Stack.Screen name="security" />
+        <Stack.Screen name="notifications" />
         <Stack.Screen name="admin" />
       </Stack>
     </ThemeProvider>
@@ -66,7 +68,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <NotificationsProvider>
+        <RootLayoutNav />
+      </NotificationsProvider>
     </AuthProvider>
   );
 }

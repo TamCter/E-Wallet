@@ -21,12 +21,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          console.error('getSession error:', error.message);
+          // If the token is invalid, clear the session and force sign out to clean local storage
+          supabase.auth.signOut().catch((err) => {
+            console.error('Failed to sign out on getSession error:', err);
+          });
+          setSession(null);
+          setUser(null);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
       })
       .catch((err) => {
-        console.error('getSession error', err);
+        console.error('getSession exception caught:', err);
+        // Clear storage on hard exception
+        supabase.auth.signOut().catch((signOutErr) => {
+          console.error('Failed to sign out on getSession exception:', signOutErr);
+        });
         setSession(null);
         setUser(null);
       })

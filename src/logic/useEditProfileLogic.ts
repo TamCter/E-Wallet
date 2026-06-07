@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -15,11 +15,7 @@ export function useEditProfileLogic() {
   const [isFocus, setIsFocus] = useState(false);
   const [userId, setUserId] = useState('');
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       setIsFetching(true);
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -47,7 +43,12 @@ export function useEditProfileLogic() {
     } finally {
       setIsFetching(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleSaveChanges = async () => {
     if (!fullName.trim()) {

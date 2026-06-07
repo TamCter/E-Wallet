@@ -111,6 +111,7 @@ export default function AdminScreen() {
       router.replace('/login');
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
   }, [session, authLoading, fetchData]);
 

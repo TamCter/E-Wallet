@@ -67,8 +67,8 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
   const [loading, setLoading] = useState(false);
 
   // Dynamic user specific storage keys
-  const readKey = useMemo(() => (user ? `${user.id}:read_notifications` : null), [user]);
-  const deletedKey = useMemo(() => (user ? `${user.id}:deleted_notifications` : null), [user]);
+  const readKey = useMemo(() => (user ? `${user.id}_read_notifications` : null), [user]);
+  const deletedKey = useMemo(() => (user ? `${user.id}_deleted_notifications` : null), [user]);
 
   const fetchNotifications = useCallback(async () => {
     if (!user || !readKey || !deletedKey) {

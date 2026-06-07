@@ -35,7 +35,10 @@ export function useTransferLogic() {
     try {
       setIsLoadingRecent(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setRecentContacts([]);
+        return;
+      }
 
       const { data: wallet } = await supabase
         .from('wallets')
@@ -43,7 +46,10 @@ export function useTransferLogic() {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (!wallet) return;
+      if (!wallet) {
+        setRecentContacts([]);
+        return;
+      }
       const userWalletId = wallet.id;
 
       const { data: txs, error } = await supabase
@@ -77,6 +83,7 @@ export function useTransferLogic() {
 
       if (error) {
         console.error('Lỗi khi lấy danh sách liên hệ gần đây:', error.message);
+        setRecentContacts([]);
         return;
       }
 
@@ -86,16 +93,16 @@ export function useTransferLogic() {
           const senderUser = tx.sender_wallet?.users;
           const receiverUser = tx.receiver_wallet?.users;
 
-          if (senderUser && senderUser.id !== user.id) {
+          if (senderUser && senderUser.id !== user.id && senderUser.phone_number) {
             uniqueContacts.set(senderUser.id, {
               name: senderUser.full_name || 'Người dùng ẩn danh',
-              phone: senderUser.phone_number || '',
+              phone: senderUser.phone_number,
               phoneCountryCode: senderUser.phone_country_code || '+84',
             });
-          } else if (receiverUser && receiverUser.id !== user.id) {
+          } else if (receiverUser && receiverUser.id !== user.id && receiverUser.phone_number) {
             uniqueContacts.set(receiverUser.id, {
               name: receiverUser.full_name || 'Người dùng ẩn danh',
-              phone: receiverUser.phone_number || '',
+              phone: receiverUser.phone_number,
               phoneCountryCode: receiverUser.phone_country_code || '+84',
             });
           }
@@ -105,6 +112,7 @@ export function useTransferLogic() {
       }
     } catch (err) {
       console.error('Lỗi lấy danh sách liên hệ gần đây:', err);
+      setRecentContacts([]);
     } finally {
       setIsLoadingRecent(false);
     }

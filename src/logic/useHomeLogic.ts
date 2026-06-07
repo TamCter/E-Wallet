@@ -21,7 +21,7 @@ export interface ChartBarData {
 export function useHomeLogic() {
   const [userData, setUserData] = useState<{ fullName: string } | null>(null);
   const [balance, setBalance] = useState<number>(0);
-  const [showBalance, setShowBalance] = useState<boolean>(true);
+  const [showBalance, setShowBalance] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
   const [weeklyNetFlow, setWeeklyNetFlow] = useState<string>('+0 đ');

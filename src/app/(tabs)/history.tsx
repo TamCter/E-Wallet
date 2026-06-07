@@ -47,11 +47,20 @@ export default function HistoryScreen() {
   } = useHistoryLogic();
 
   const handleCopyTxId = async (id: string) => {
-    await Clipboard.setStringAsync(id);
-    if (Platform.OS === 'android') {
-      ToastAndroid.show('Đã sao chép mã giao dịch!', ToastAndroid.SHORT);
-    } else {
-      Alert.alert('Đã sao chép', 'Mã giao dịch đã được lưu vào danh sách nhớ tạm.');
+    try {
+      await Clipboard.setStringAsync(id);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Đã sao chép mã giao dịch!', ToastAndroid.SHORT);
+      } else {
+        Alert.alert('Đã sao chép', 'Mã giao dịch đã được lưu vào danh sách nhớ tạm.');
+      }
+    } catch (error) {
+      console.error('Lỗi khi sao chép mã giao dịch:', error);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Không thể sao chép mã giao dịch!', ToastAndroid.SHORT);
+      } else {
+        Alert.alert('Lỗi', 'Không thể sao chép mã giao dịch.');
+      }
     }
   };
 

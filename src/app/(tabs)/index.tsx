@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -63,13 +63,9 @@ export default function HomepageScreen() {
           </Text>
           
           <View style={styles.cardActions}>
-            <TouchableOpacity style={styles.cardButton} onPress={() => {}}>
+            <TouchableOpacity style={styles.cardButton} onPress={() => Alert.alert('Nạp tiền', 'Tính năng nạp tiền đang được phát triển.')}>
               <Ionicons name="add" size={20} color="#0544B3" />
               <Text style={styles.cardButtonText}>Nạp tiền</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cardButtonOutline} onPress={() => router.push('/transfer' as any)}>
-              <Ionicons name="arrow-up" size={20} color="#fff" />
-              <Text style={styles.cardButtonOutlineText}>Chuyển tiền</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -243,7 +239,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 12,
-    flex: 0.48,
+    flex: 1,
     justifyContent: 'center',
   },
   cardButtonText: {

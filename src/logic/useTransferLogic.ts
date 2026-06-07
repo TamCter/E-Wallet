@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -23,11 +23,7 @@ export function useTransferLogic() {
   const [isDropdownFocus, setIsDropdownFocus] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
 
-  useEffect(() => {
-    fetchWalletBalance();
-  }, []);
-
-  const fetchWalletBalance = async () => {
+  const fetchWalletBalance = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -51,7 +47,12 @@ export function useTransferLogic() {
     } catch (err) {
       console.error("Lỗi lấy thông tin số dư:", err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchWalletBalance();
+  }, [fetchWalletBalance]);
 
   const handlePhoneLookup = async (customPhone?: string, customCountryCode?: string) => {
     const targetPhone = customPhone !== undefined ? customPhone : phone;

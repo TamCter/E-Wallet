@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -10,11 +10,7 @@ export function useProfileLogic() {
   const [balance, setBalance] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    fetchProfileAndWallet();
-  }, []);
-
-  const fetchProfileAndWallet = async () => {
+  const fetchProfileAndWallet = useCallback(async () => {
     try {
       setIsLoading(true);
 
@@ -57,7 +53,12 @@ export function useProfileLogic() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchProfileAndWallet();
+  }, [fetchProfileAndWallet]);
 
   const handleLogout = async () => {
     try {

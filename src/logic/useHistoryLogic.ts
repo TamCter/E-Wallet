@@ -78,7 +78,8 @@ export function useHistoryLogic() {
               id,
               full_name,
               phone_number,
-              phone_country_code
+              phone_country_code,
+              email
             )
           ),
           receiver_wallet:receiver_wallet_id (
@@ -88,7 +89,8 @@ export function useHistoryLogic() {
               id,
               full_name,
               phone_number,
-              phone_country_code
+              phone_country_code,
+              email
             )
           )
         `)

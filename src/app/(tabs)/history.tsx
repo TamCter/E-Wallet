@@ -9,11 +9,11 @@ import {
   SectionList,
   Modal,
   ActivityIndicator,
-  Clipboard,
   Alert,
   ToastAndroid,
   Platform,
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useHistoryLogic, FormattedTransaction, FilterType } from '@/logic/useHistoryLogic';

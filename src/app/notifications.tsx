@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -7,6 +7,16 @@ import { useNotificationsLogic, NotificationItem, NotificationTab } from '@/logi
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const [claimed, setClaimed] = useState(false);
+
+  const handleClaimCoupon = () => {
+    if (claimed) return;
+    setClaimed(true);
+    Alert.alert(
+      'Nhận ưu đãi thành công',
+      'Mã giảm giá đã được lưu vào ví của bạn!'
+    );
+  };
   const {
     groupedNotifications,
     activeTab,
@@ -77,8 +87,12 @@ export default function NotificationsScreen() {
         <View style={styles.couponLeft}>
           <Text style={styles.couponTitle}>$000</Text>
           <Text style={styles.couponSubtitle}>VÔ DƯỚI 1s</Text>
-          <TouchableOpacity style={styles.couponBtn}>
-            <Text style={styles.couponBtnText}>NHẬN NGAY</Text>
+          <TouchableOpacity
+            style={[styles.couponBtn, claimed && styles.couponBtnClaimed]}
+            onPress={handleClaimCoupon}
+            disabled={claimed}
+          >
+            <Text style={styles.couponBtnText}>{claimed ? 'ĐÃ NHẬN' : 'NHẬN NGAY'}</Text>
           </TouchableOpacity>
         </View>
         {/* Divider line */}
@@ -389,6 +403,9 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 8,
     fontWeight: 'bold',
+  },
+  couponBtnClaimed: {
+    backgroundColor: '#78909C',
   },
   couponDivider: {
     width: 20,

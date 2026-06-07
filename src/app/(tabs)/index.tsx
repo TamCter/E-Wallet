@@ -47,7 +47,7 @@ export default function HomepageScreen() {
               <Text style={styles.userName}>{userData?.fullName || 'Người dùng'}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.bellButton} onPress={() => router.push('/notifications' as any)}>
+          <TouchableOpacity style={styles.bellButton} onPress={() => router.push('/notifications')}>
             <Ionicons name="notifications-outline" size={24} color="#1a1a1a" />
             {hasUnread && <View style={styles.notificationDot} />}
           </TouchableOpacity>

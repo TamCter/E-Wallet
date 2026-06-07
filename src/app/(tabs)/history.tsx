@@ -16,9 +16,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useHistoryLogic, FormattedTransaction, FilterType } from '@/logic/useHistoryLogic';
-import { useNotificationsLogic } from '@/logic/useNotificationsLogic';
 
 interface FilterOption {
   label: string;
@@ -35,8 +33,6 @@ const FILTER_OPTIONS: FilterOption[] = [
 ];
 
 export default function HistoryScreen() {
-  const router = useRouter();
-  const { hasUnread } = useNotificationsLogic();
   const {
     groupedTransactions,
     loading,
@@ -632,16 +628,5 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  notificationDot: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#D32F2F',
-    borderWidth: 1,
-    borderColor: '#ffffff',
   },
 });

@@ -6,6 +6,12 @@ import { supabase } from '@/lib/supabase';
 export type Tab = 'phone' | 'qr';
 export type Step = 'input' | 'amount' | 'review' | 'success' | 'error';
 
+export interface RecentContact {
+  name: string;
+  phone: string;
+  phoneCountryCode: string;
+}
+
 export function useTransferLogic() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('phone');
@@ -22,6 +28,95 @@ export function useTransferLogic() {
   const [realBalance, setRealBalance] = useState<number>(0);
   const [isDropdownFocus, setIsDropdownFocus] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
+  const [recentContacts, setRecentContacts] = useState<RecentContact[]>([]);
+  const [isLoadingRecent, setIsLoadingRecent] = useState(false);
+
+  const fetchRecentContacts = useCallback(async () => {
+    try {
+      setIsLoadingRecent(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setRecentContacts([]);
+        return;
+      }
+
+      const { data: wallet } = await supabase
+        .from('wallets')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!wallet) {
+        setRecentContacts([]);
+        return;
+      }
+      const userWalletId = wallet.id;
+
+      const { data: txs, error } = await supabase
+        .from('transactions')
+        .select(`
+          sender_wallet:sender_wallet_id (
+            id,
+            user_id,
+            users:user_id (
+              id,
+              full_name,
+              phone_number,
+              phone_country_code
+            )
+          ),
+          receiver_wallet:receiver_wallet_id (
+            id,
+            user_id,
+            users:user_id (
+              id,
+              full_name,
+              phone_number,
+              phone_country_code
+            )
+          )
+        `)
+        .eq('type', 'transfer')
+        .or(`sender_wallet_id.eq.${userWalletId},receiver_wallet_id.eq.${userWalletId}`)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('Lỗi khi lấy danh sách liên hệ gần đây:', error.message);
+        setRecentContacts([]);
+        return;
+      }
+
+      if (txs) {
+        const uniqueContacts = new Map<string, RecentContact>();
+        txs.forEach((tx: any) => {
+          const senderUser = tx.sender_wallet?.users;
+          const receiverUser = tx.receiver_wallet?.users;
+
+          if (senderUser && senderUser.id !== user.id && senderUser.phone_number) {
+            uniqueContacts.set(senderUser.id, {
+              name: senderUser.full_name || 'Người dùng ẩn danh',
+              phone: senderUser.phone_number,
+              phoneCountryCode: senderUser.phone_country_code || '+84',
+            });
+          } else if (receiverUser && receiverUser.id !== user.id && receiverUser.phone_number) {
+            uniqueContacts.set(receiverUser.id, {
+              name: receiverUser.full_name || 'Người dùng ẩn danh',
+              phone: receiverUser.phone_number,
+              phoneCountryCode: receiverUser.phone_country_code || '+84',
+            });
+          }
+        });
+
+        setRecentContacts(Array.from(uniqueContacts.values()).slice(0, 5));
+      }
+    } catch (err) {
+      console.error('Lỗi lấy danh sách liên hệ gần đây:', err);
+      setRecentContacts([]);
+    } finally {
+      setIsLoadingRecent(false);
+    }
+  }, []);
 
   const fetchWalletBalance = useCallback(async () => {
     try {
@@ -52,7 +147,8 @@ export function useTransferLogic() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchWalletBalance();
-  }, [fetchWalletBalance]);
+    fetchRecentContacts();
+  }, [fetchWalletBalance, fetchRecentContacts]);
 
   const handlePhoneLookup = async (customPhone?: string, customCountryCode?: string) => {
     const targetPhone = customPhone !== undefined ? customPhone : phone;
@@ -140,6 +236,7 @@ export function useTransferLogic() {
         setTxnId(transactionId);
         setStep('success');
         fetchWalletBalance();
+        fetchRecentContacts();
       }
     } catch (err: any) {
       Alert.alert('Lỗi kết nối', err.message);
@@ -180,6 +277,8 @@ export function useTransferLogic() {
     isDropdownFocus,
     setIsDropdownFocus,
     isTransferring,
+    recentContacts,
+    isLoadingRecent,
     handlePhoneLookup,
     handleConfirm,
     handleTransfer,

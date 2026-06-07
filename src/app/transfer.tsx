@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator,
@@ -32,6 +32,7 @@ export default function TransferScreen() {
     isDropdownFocus,
     setIsDropdownFocus,
     isTransferring,
+    recentContacts,
     handlePhoneLookup,
     handleConfirm,
     handleTransfer,
@@ -129,27 +130,27 @@ const renderHeader = () => (
         </Text>
       </TouchableOpacity>
 
-      <Text style={[styles.cardTitle, { marginTop: 24 }]}>Gần đây</Text>
-      {[
-        { name: 'Trần Thị B', phone: '912345678' },
-        { name: 'Lê Văn C', phone: '987654321' },
-        { name: 'Phạm Thị D', phone: '901234567' },
-      ].map((c, i) => (
-        <TouchableOpacity
-          key={i}
-          style={styles.contactRow}
-          onPress={() => handlePhoneLookup(c.phone, phoneCountryCode)}
-        >
-          <View style={styles.contactAvatar}>
-            <Text style={styles.contactInitial}>{c.name[0]}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.contactName}>{c.name}</Text>
-            <Text style={styles.contactPhone}>{c.phone}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color="#ccc" />
-        </TouchableOpacity>
-      ))}
+      {recentContacts.length > 0 && (
+        <>
+          <Text style={[styles.cardTitle, { marginTop: 24 }]}>Gần đây</Text>
+          {recentContacts.map((c, i) => (
+            <TouchableOpacity
+              key={i}
+              style={styles.contactRow}
+              onPress={() => handlePhoneLookup(c.phone, c.phoneCountryCode)}
+            >
+              <View style={styles.contactAvatar}>
+                <Text style={styles.contactInitial}>{c.name ? c.name[0] : 'U'}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.contactName}>{c.name}</Text>
+                <Text style={styles.contactPhone}>{c.phoneCountryCode} {c.phone}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#ccc" />
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
     </View>
   );
 

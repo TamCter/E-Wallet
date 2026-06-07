@@ -13,7 +13,7 @@ import {
   ToastAndroid,
   Platform,
 } from 'react-native';
-import Clipboard from '@react-native-clipboard/clipboard';
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useHistoryLogic, FormattedTransaction, FilterType } from '@/logic/useHistoryLogic';
@@ -46,12 +46,21 @@ export default function HistoryScreen() {
     handleRefresh,
   } = useHistoryLogic();
 
-  const handleCopyTxId = (id: string) => {
-    Clipboard.setString(id);
-    if (Platform.OS === 'android') {
-      ToastAndroid.show('Đã sao chép mã giao dịch!', ToastAndroid.SHORT);
-    } else {
-      Alert.alert('Đã sao chép', 'Mã giao dịch đã được lưu vào danh sách nhớ tạm.');
+  const handleCopyTxId = async (id: string) => {
+    try {
+      await Clipboard.setStringAsync(id);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Đã sao chép mã giao dịch!', ToastAndroid.SHORT);
+      } else {
+        Alert.alert('Đã sao chép', 'Mã giao dịch đã được lưu vào danh sách nhớ tạm.');
+      }
+    } catch (error) {
+      console.error('Lỗi khi sao chép mã giao dịch:', error);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Không thể sao chép mã giao dịch!', ToastAndroid.SHORT);
+      } else {
+        Alert.alert('Lỗi', 'Không thể sao chép mã giao dịch.');
+      }
     }
   };
 

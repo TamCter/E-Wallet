@@ -20,17 +20,17 @@ function RootLayoutNav() {
 
     const guestOnlyScreens = ['login', 'register', 'onboarding', 'index'];
     const publicScreens = ['reset-password', 'otp-verification', 'forgot-password'];
-    
+
     const isGuestOnly = guestOnlyScreens.includes(segments[0] || '');
     const isPublic = publicScreens.includes(segments[0] || '');
-    
+
     const isAdmin = session?.user?.email?.toLowerCase() === 'admin@gmail.com';
     const isAdminScreen = segments[0] === 'admin';
 
     // Nếu chưa đăng nhập và cố truy cập màn hình cần bảo vệ (không phải guest-only và không phải public)
     if (!session && !isGuestOnly && !isPublic) {
       router.replace('/login');
-    } 
+    }
     // Nếu đã đăng nhập
     else if (session) {
       if (isAdminScreen && !isAdmin) {
@@ -66,8 +66,6 @@ function RootLayoutNav() {
     </ThemeProvider>
   );
 }
-
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function RootLayout() {
   return (

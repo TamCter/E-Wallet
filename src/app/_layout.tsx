@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ToastProvider } from '@/context/ToastContext';
 import { NotificationsProvider } from '@/context/NotificationsContext';
 

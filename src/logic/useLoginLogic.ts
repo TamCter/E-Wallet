@@ -69,7 +69,7 @@ export function useLoginLogic() {
           await SecureStore.setItemAsync('lastEmail', email);
         }
       } catch (storeErr) {
-        console.warn('Could not persist lastEmail:', storeErr);
+        console.log('Could not persist lastEmail:', storeErr);
       }
 
       const isUserAdmin = authData.user?.email?.toLowerCase() === 'admin@gmail.com';

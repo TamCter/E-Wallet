@@ -53,14 +53,14 @@ export default function AdminScreen() {
         .select('*');
 
       if (usersError || walletsError) {
-        console.warn('Could not fetch complete DB records:', usersError || walletsError);
+        console.log('Could not fetch complete DB records:', usersError || walletsError);
         setErrorMessage('Không thể truy xuất dữ liệu từ cơ sở dữ liệu.');
         setUsers([]);
         return;
       }
 
       if (transactionsError) {
-        console.warn('Could not fetch transaction records:', transactionsError);
+        console.log('Could not fetch transaction records:', transactionsError);
       } else {
         setTransactions(dbTransactions || []);
       }

@@ -50,9 +50,7 @@ export default function EditProfileScreen() {
               <Ionicons name="arrow-back" size={24} color="#0544B3" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Chỉnh sửa hồ sơ</Text>
-            <TouchableOpacity onPress={() => router.push('/security')} style={styles.headerBtn}>
-              <Ionicons name="settings-outline" size={24} color="#0544B3" />
-            </TouchableOpacity>
+            <View style={{ width: 40 }} />
           </View>
 
           {/* Profile Picture */}
@@ -99,7 +97,7 @@ export default function EditProfileScreen() {
                   value={phoneCountryCode}
                   onFocus={() => setIsFocus(true)}
                   onBlur={() => setIsFocus(false)}
-                   onChange={() => {}}
+                  onChange={() => { }}
                   renderLeftIcon={() => (
                     <Ionicons name="call-outline" size={16} color="#A0A0A0" style={{ marginRight: 4 }} />
                   )}

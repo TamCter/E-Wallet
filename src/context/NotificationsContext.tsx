@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
 
-const DEBUG = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+const DEBUG = false;
 
 export interface NotificationItem {
   id: string;
@@ -353,7 +353,7 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
 
     const setupRealtime = async () => {
       try {
-        if (DEBUG) console.warn('[Realtime Setup] Fetching wallet for user:', user.id);
+        if (DEBUG) console.log('[Realtime Setup] Fetching wallet for user:', user.id);
         const { data: wallet } = await supabase
           .from('wallets')
           .select('id')
@@ -361,11 +361,11 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
           .maybeSingle();
 
         if (!active || !wallet) {
-          if (DEBUG) console.warn('[Realtime Setup] Wallet not found or hook inactive');
+          if (DEBUG) console.log('[Realtime Setup] Wallet not found or hook inactive');
           return;
         }
         const userWalletId = wallet.id;
-        if (DEBUG) console.warn('[Realtime Setup] User Wallet ID:', userWalletId);
+        if (DEBUG) console.log('[Realtime Setup] User Wallet ID:', userWalletId);
 
         // Subscribe to INSERT events on public.transactions
         channel = supabase
@@ -378,16 +378,16 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
               table: 'transactions',
             },
             async (payload) => {
-              if (DEBUG) console.warn('[Realtime Event] Received new transaction insert:', payload);
+              if (DEBUG) console.log('[Realtime Event] Received new transaction insert:', payload);
               const newTx = payload.new;
               
               const isSender = newTx.sender_wallet_id === userWalletId;
               const isReceiver = newTx.receiver_wallet_id === userWalletId;
               
-              if (DEBUG) console.warn(`[Realtime Event] Wallet match check - isSender: ${isSender}, isReceiver: ${isReceiver}`);
+              if (DEBUG) console.log(`[Realtime Event] Wallet match check - isSender: ${isSender}, isReceiver: ${isReceiver}`);
 
               if (isSender || isReceiver) {
-                if (DEBUG) console.warn('[Realtime Event] Transaction matches user wallet. Fetching details...');
+                if (DEBUG) console.log('[Realtime Event] Transaction matches user wallet. Fetching details...');
                 // Fetch full details of the transaction including counterpart names
                 const { data: rawTxDetails, error } = await supabase
                   .from('transactions')
@@ -424,14 +424,14 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
                 }
 
                 if (!active || !rawTxDetails) {
-                  if (DEBUG) console.warn('[Realtime Event] No details fetched or hook inactive');
+                  if (DEBUG) console.log('[Realtime Event] No details fetched or hook inactive');
                   return;
                 }
                 const txDetails = rawTxDetails as any;
-                if (DEBUG) console.warn('[Realtime Event] Fetched details successfully:', txDetails);
+                if (DEBUG) console.log('[Realtime Event] Fetched details successfully:', txDetails);
 
                 // 1. Refresh local notifications list
-                if (DEBUG) console.warn('[Realtime Event] Refreshing notification list...');
+                if (DEBUG) console.log('[Realtime Event] Refreshing notification list...');
                 fetchNotificationsRef.current();
 
                 // 2. Determine details for the Toast
@@ -469,7 +469,7 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
                 }
 
                 // 3. Trigger the toast!
-                if (DEBUG) console.warn(`[Realtime Event] Triggering showToast - Title: "${title}", Type: ${toastType}`);
+                if (DEBUG) console.log(`[Realtime Event] Triggering showToast - Title: "${title}", Type: ${toastType}`);
                 showToastRef.current(title, subtitle, toastType, amountNum);
               }
             }
@@ -477,7 +477,7 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
 
         if (active) {
           channel.subscribe((status: string) => {
-            if (DEBUG) console.warn('[Realtime Setup] Channel subscription status:', status);
+            if (DEBUG) console.log('[Realtime Setup] Channel subscription status:', status);
           });
         }
       } catch (err) {
@@ -490,7 +490,7 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
     return () => {
       active = false;
       if (channel) {
-        if (DEBUG) console.warn('[Realtime Cleanup] Unsubscribing from channel');
+        if (DEBUG) console.log('[Realtime Cleanup] Unsubscribing from channel');
         supabase.removeChannel(channel);
       }
     };

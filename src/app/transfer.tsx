@@ -284,11 +284,17 @@ const renderHeader = () => (
           { label: 'Đến', value: recipientName },
           { label: 'Số điện thoại', value: `${phoneCountryCode} ${phone}` },
           { label: 'Phí', value: '0đ' },
-          { label: 'Mã tham chiếu', value: txnId },
+          { label: 'Mã tham chiếu', value: txnId, isTxn: true },
         ].map((row, i) => (
           <View key={i} style={styles.reviewRow}>
             <Text style={styles.reviewLabel}>{row.label}</Text>
-            <Text style={styles.reviewValue}>{row.value}</Text>
+            <Text 
+              style={styles.reviewValue}
+              numberOfLines={row.isTxn ? 1 : undefined}
+              ellipsizeMode={row.isTxn ? 'middle' : undefined}
+            >
+              {row.value}
+            </Text>
           </View>
         ))}
       </View>
@@ -468,7 +474,7 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: '#f0f0f0', marginVertical: 16 },
   reviewRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
   reviewLabel: { fontSize: 14, color: '#888' },
-  reviewValue: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
+  reviewValue: { fontSize: 14, fontWeight: '600', color: '#1a1a1a', textAlign: 'right', flex: 1, marginLeft: 16 },
   reviewValueBold: { fontSize: 15, fontWeight: '800', color: '#0544B3' },
   reviewNote: { fontSize: 12, color: '#888', textAlign: 'center', marginTop: 12, marginBottom: 4 },
   successContainer: { flex: 1, alignItems: 'center', padding: 24, paddingTop: 40 },

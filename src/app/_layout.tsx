@@ -66,14 +66,18 @@ function RootLayoutNav() {
   );
 }
 
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <NotificationsProvider>
-          <RootLayoutNav />
-        </NotificationsProvider>
-      </ToastProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <NotificationsProvider>
+            <RootLayoutNav />
+          </NotificationsProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

@@ -44,6 +44,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Animation values
   const translateY = useRef(new Animated.Value(-120)).current;
@@ -53,6 +54,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
+    }
+    if (pendingTimeoutRef.current) {
+      clearTimeout(pendingTimeoutRef.current);
+      pendingTimeoutRef.current = null;
     }
 
     Animated.parallel([
@@ -75,14 +80,21 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const showToast = useCallback(
     (title: string, subtitle: string, type: ToastType, amount?: number) => {
       if (DEBUG) console.warn('[ToastProvider] showToast called:', { title, subtitle, type, amount });
+      
+      if (pendingTimeoutRef.current) {
+        clearTimeout(pendingTimeoutRef.current);
+        pendingTimeoutRef.current = null;
+      }
+
       // If a toast is already visible, hide it first, then show the new one
       if (isVisible) {
         if (DEBUG) console.warn('[ToastProvider] Toast is already visible, hiding first');
         hideToast();
-        setTimeout(() => {
+        pendingTimeoutRef.current = setTimeout(() => {
           if (DEBUG) console.warn('[ToastProvider] Showing new toast after hiding previous');
           setToast({ title, subtitle, type, amount });
           setIsVisible(true);
+          pendingTimeoutRef.current = null;
         }, 350);
         return;
       }
@@ -127,6 +139,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
+      }
+      if (pendingTimeoutRef.current) {
+        clearTimeout(pendingTimeoutRef.current);
       }
     };
   }, [isVisible, toast, insets.top, translateY, opacity, hideToast]);

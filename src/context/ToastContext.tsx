@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 type ToastType = 'incoming' | 'outgoing' | 'info';
 
+const DEBUG = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+
 interface ToastOptions {
   title: string;
   subtitle: string;
@@ -72,20 +74,20 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const showToast = useCallback(
     (title: string, subtitle: string, type: ToastType, amount?: number) => {
-      console.warn('[ToastProvider] showToast called:', { title, subtitle, type, amount });
+      if (DEBUG) console.warn('[ToastProvider] showToast called:', { title, subtitle, type, amount });
       // If a toast is already visible, hide it first, then show the new one
       if (isVisible) {
-        console.warn('[ToastProvider] Toast is already visible, hiding first');
+        if (DEBUG) console.warn('[ToastProvider] Toast is already visible, hiding first');
         hideToast();
         setTimeout(() => {
-          console.warn('[ToastProvider] Showing new toast after hiding previous');
+          if (DEBUG) console.warn('[ToastProvider] Showing new toast after hiding previous');
           setToast({ title, subtitle, type, amount });
           setIsVisible(true);
         }, 350);
         return;
       }
 
-      console.warn('[ToastProvider] Showing toast:', { title, subtitle });
+      if (DEBUG) console.warn('[ToastProvider] Showing toast:', { title, subtitle });
       setToast({ title, subtitle, type, amount });
       setIsVisible(true);
     },
@@ -93,11 +95,11 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   useEffect(() => {
-    console.warn('[ToastProvider] useEffect triggered. isVisible:', isVisible, 'toast:', !!toast);
+    if (DEBUG) console.warn('[ToastProvider] useEffect triggered. isVisible:', isVisible, 'toast:', !!toast);
     if (isVisible && toast) {
       // Calculate active top position based on notch/safe area
       const activeTop = insets.top > 0 ? insets.top + 8 : 16;
-      console.warn('[ToastProvider] Animating toast to activeTop:', activeTop);
+      if (DEBUG) console.warn('[ToastProvider] Animating toast to activeTop:', activeTop);
 
       Animated.parallel([
         Animated.spring(translateY, {
@@ -112,12 +114,12 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           useNativeDriver: true,
         }),
       ]).start((result) => {
-        console.warn('[ToastProvider] Toast animation finished. Result:', result);
+        if (DEBUG) console.warn('[ToastProvider] Toast animation finished. Result:', result);
       });
 
       // Auto dismiss after 5 seconds
       timerRef.current = setTimeout(() => {
-        console.warn('[ToastProvider] Auto dismiss triggered');
+        if (DEBUG) console.warn('[ToastProvider] Auto dismiss triggered');
         hideToast();
       }, 5000);
     }

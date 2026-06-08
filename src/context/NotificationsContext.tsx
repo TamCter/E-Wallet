@@ -2,9 +2,12 @@ import React, { createContext, useState, useEffect, useCallback, useMemo, useRef
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
+
+const DEBUG = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
 
 export interface NotificationItem {
   id: string;
@@ -346,11 +349,11 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
     if (!user?.id) return;
 
     let active = true;
-    let channel: any = null;
+    let channel: RealtimeChannel | null = null;
 
     const setupRealtime = async () => {
       try {
-        console.warn('[Realtime Setup] Fetching wallet for user:', user.id);
+        if (DEBUG) console.warn('[Realtime Setup] Fetching wallet for user:', user.id);
         const { data: wallet } = await supabase
           .from('wallets')
           .select('id')
@@ -358,11 +361,11 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
           .maybeSingle();
 
         if (!active || !wallet) {
-          console.warn('[Realtime Setup] Wallet not found or hook inactive');
+          if (DEBUG) console.warn('[Realtime Setup] Wallet not found or hook inactive');
           return;
         }
         const userWalletId = wallet.id;
-        console.warn('[Realtime Setup] User Wallet ID:', userWalletId);
+        if (DEBUG) console.warn('[Realtime Setup] User Wallet ID:', userWalletId);
 
         // Subscribe to INSERT events on public.transactions
         channel = supabase
@@ -375,16 +378,16 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
               table: 'transactions',
             },
             async (payload) => {
-              console.warn('[Realtime Event] Received new transaction insert:', payload);
+              if (DEBUG) console.warn('[Realtime Event] Received new transaction insert:', payload);
               const newTx = payload.new;
               
               const isSender = newTx.sender_wallet_id === userWalletId;
               const isReceiver = newTx.receiver_wallet_id === userWalletId;
               
-              console.warn(`[Realtime Event] Wallet match check - isSender: ${isSender}, isReceiver: ${isReceiver}`);
+              if (DEBUG) console.warn(`[Realtime Event] Wallet match check - isSender: ${isSender}, isReceiver: ${isReceiver}`);
 
               if (isSender || isReceiver) {
-                console.warn('[Realtime Event] Transaction matches user wallet. Fetching details...');
+                if (DEBUG) console.warn('[Realtime Event] Transaction matches user wallet. Fetching details...');
                 // Fetch full details of the transaction including counterpart names
                 const { data: rawTxDetails, error } = await supabase
                   .from('transactions')
@@ -417,18 +420,18 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
                   .maybeSingle();
 
                 if (error) {
-                  console.error('[Realtime Event] Error fetching details:', error);
+                  if (DEBUG) console.error('[Realtime Event] Error fetching details:', error);
                 }
 
                 if (!active || !rawTxDetails) {
-                  console.warn('[Realtime Event] No details fetched or hook inactive');
+                  if (DEBUG) console.warn('[Realtime Event] No details fetched or hook inactive');
                   return;
                 }
                 const txDetails = rawTxDetails as any;
-                console.warn('[Realtime Event] Fetched details successfully:', txDetails);
+                if (DEBUG) console.warn('[Realtime Event] Fetched details successfully:', txDetails);
 
                 // 1. Refresh local notifications list
-                console.warn('[Realtime Event] Refreshing notification list...');
+                if (DEBUG) console.warn('[Realtime Event] Refreshing notification list...');
                 fetchNotificationsRef.current();
 
                 // 2. Determine details for the Toast
@@ -466,7 +469,7 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
                 }
 
                 // 3. Trigger the toast!
-                console.warn(`[Realtime Event] Triggering showToast - Title: "${title}", Type: ${toastType}`);
+                if (DEBUG) console.warn(`[Realtime Event] Triggering showToast - Title: "${title}", Type: ${toastType}`);
                 showToastRef.current(title, subtitle, toastType, amountNum);
               }
             }
@@ -474,11 +477,11 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
 
         if (active) {
           channel.subscribe((status: string) => {
-            console.warn('[Realtime Setup] Channel subscription status:', status);
+            if (DEBUG) console.warn('[Realtime Setup] Channel subscription status:', status);
           });
         }
       } catch (err) {
-        console.error('Error setting up transaction realtime subscription:', err);
+        if (DEBUG) console.error('Error setting up transaction realtime subscription:', err);
       }
     };
 
@@ -487,7 +490,7 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
     return () => {
       active = false;
       if (channel) {
-        console.warn('[Realtime Cleanup] Unsubscribing from channel');
+        if (DEBUG) console.warn('[Realtime Cleanup] Unsubscribing from channel');
         supabase.removeChannel(channel);
       }
     };

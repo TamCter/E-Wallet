@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { ToastProvider } from '@/context/ToastContext';
 import { NotificationsProvider } from '@/context/NotificationsContext';
 
 function RootLayoutNav() {
@@ -68,9 +69,11 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <NotificationsProvider>
-        <RootLayoutNav />
-      </NotificationsProvider>
+      <ToastProvider>
+        <NotificationsProvider>
+          <RootLayoutNav />
+        </NotificationsProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

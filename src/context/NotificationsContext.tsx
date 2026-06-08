@@ -1,9 +1,10 @@
-import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
+import { useToast } from './ToastContext';
 
 export interface NotificationItem {
   id: string;
@@ -60,6 +61,7 @@ const storage = {
 
 export const NotificationsProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [readIds, setReadIds] = useState<string[]>([]);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
@@ -327,6 +329,169 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchNotifications();
   }, [fetchNotifications]);
+
+  const fetchNotificationsRef = useRef(fetchNotifications);
+  const showToastRef = useRef(showToast);
+
+  useEffect(() => {
+    fetchNotificationsRef.current = fetchNotifications;
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
+
+  // Real-time Supabase subscription for new transactions
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let active = true;
+    let channel: any = null;
+
+    const setupRealtime = async () => {
+      try {
+        console.warn('[Realtime Setup] Fetching wallet for user:', user.id);
+        const { data: wallet } = await supabase
+          .from('wallets')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!active || !wallet) {
+          console.warn('[Realtime Setup] Wallet not found or hook inactive');
+          return;
+        }
+        const userWalletId = wallet.id;
+        console.warn('[Realtime Setup] User Wallet ID:', userWalletId);
+
+        // Subscribe to INSERT events on public.transactions
+        channel = supabase
+          .channel(`user-txs-${user.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'transactions',
+            },
+            async (payload) => {
+              console.warn('[Realtime Event] Received new transaction insert:', payload);
+              const newTx = payload.new;
+              
+              const isSender = newTx.sender_wallet_id === userWalletId;
+              const isReceiver = newTx.receiver_wallet_id === userWalletId;
+              
+              console.warn(`[Realtime Event] Wallet match check - isSender: ${isSender}, isReceiver: ${isReceiver}`);
+
+              if (isSender || isReceiver) {
+                console.warn('[Realtime Event] Transaction matches user wallet. Fetching details...');
+                // Fetch full details of the transaction including counterpart names
+                const { data: rawTxDetails, error } = await supabase
+                  .from('transactions')
+                  .select(`
+                    id,
+                    amount,
+                    type,
+                    status,
+                    created_at,
+                    sender_wallet_id,
+                    receiver_wallet_id,
+                    sender_wallet:sender_wallet_id (
+                      id,
+                      user_id,
+                      users:user_id (
+                        id,
+                        full_name
+                      )
+                    ),
+                    receiver_wallet:receiver_wallet_id (
+                      id,
+                      user_id,
+                      users:user_id (
+                        id,
+                        full_name
+                      )
+                    )
+                  `)
+                  .eq('id', newTx.id)
+                  .maybeSingle();
+
+                if (error) {
+                  console.error('[Realtime Event] Error fetching details:', error);
+                }
+
+                if (!active || !rawTxDetails) {
+                  console.warn('[Realtime Event] No details fetched or hook inactive');
+                  return;
+                }
+                const txDetails = rawTxDetails as any;
+                console.warn('[Realtime Event] Fetched details successfully:', txDetails);
+
+                // 1. Refresh local notifications list
+                console.warn('[Realtime Event] Refreshing notification list...');
+                fetchNotificationsRef.current();
+
+                // 2. Determine details for the Toast
+                const isIncoming = txDetails.receiver_wallet_id === userWalletId;
+                const amountNum = parseFloat(txDetails.amount);
+                const formattedAmt = new Intl.NumberFormat('vi-VN').format(amountNum);
+
+                let title = '';
+                let subtitle = '';
+                let toastType: 'incoming' | 'outgoing' | 'info' = 'info';
+
+                if (txDetails.type === 'deposit') {
+                  title = 'Nạp tiền thành công';
+                  subtitle = `Số dư khả dụng vừa tăng thêm +${formattedAmt}đ`;
+                  toastType = 'incoming';
+                } else if (txDetails.type === 'withdrawal') {
+                  title = 'Rút tiền thành công';
+                  subtitle = `Số dư khả dụng vừa giảm đi -${formattedAmt}đ`;
+                  toastType = 'outgoing';
+                } else {
+                  // transfer
+                  const counterpartName = isIncoming
+                    ? (txDetails.sender_wallet?.users?.full_name || 'Người dùng ẩn danh')
+                    : (txDetails.receiver_wallet?.users?.full_name || 'Người dùng ẩn danh');
+
+                  if (isIncoming) {
+                    title = 'Biến động số dư (Nhận tiền)';
+                    subtitle = `Tài khoản vừa nhận +${formattedAmt}đ từ ${counterpartName}`;
+                    toastType = 'incoming';
+                  } else {
+                    title = 'Biến động số dư (Chuyển tiền)';
+                    subtitle = `Tài khoản vừa chuyển -${formattedAmt}đ đến ${counterpartName}`;
+                    toastType = 'outgoing';
+                  }
+                }
+
+                // 3. Trigger the toast!
+                console.warn(`[Realtime Event] Triggering showToast - Title: "${title}", Type: ${toastType}`);
+                showToastRef.current(title, subtitle, toastType, amountNum);
+              }
+            }
+          );
+
+        if (active) {
+          channel.subscribe((status: string) => {
+            console.warn('[Realtime Setup] Channel subscription status:', status);
+          });
+        }
+      } catch (err) {
+        console.error('Error setting up transaction realtime subscription:', err);
+      }
+    };
+
+    setupRealtime();
+
+    return () => {
+      active = false;
+      if (channel) {
+        console.warn('[Realtime Cleanup] Unsubscribing from channel');
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [user?.id]);
 
   // Filter notifications based on tab
   const filteredNotifications = useMemo(() => {

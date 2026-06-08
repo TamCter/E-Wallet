@@ -198,14 +198,18 @@ export function useHomeLogic() {
           // Check if this falls in our last 5 days
           const txDate = new Date(tx.created_at).toDateString();
           if (last5DaysData[txDate]) {
-            last5DaysData[txDate].total += numAmt;
+            if (isIncoming) {
+              last5DaysData[txDate].total += numAmt;
+            } else {
+              last5DaysData[txDate].total -= numAmt;
+            }
           }
         });
 
         const formattedNet = new Intl.NumberFormat('vi-VN').format(Math.abs(netFlow));
         setWeeklyNetFlow(`${netFlow >= 0 ? '+' : '-'}${formattedNet} đ`);
 
-        // Compute heights for the chart bars relative to the maximum day amount
+        // Compute heights for the chart bars relative to the maximum absolute day amount
         const bars: ChartBarData[] = Object.keys(last5DaysData).map((dateKey) => {
           const dayData = last5DaysData[dateKey];
           return {
@@ -215,11 +219,11 @@ export function useHomeLogic() {
           };
         });
 
-        const maxAmount = Math.max(...bars.map(b => b.rawAmount));
+        const maxAmount = Math.max(...bars.map(b => Math.abs(b.rawAmount)));
         const finalBars = bars.map(b => {
           let height = 10; // min height (10%)
           if (maxAmount > 0) {
-            height = Math.max(10, Math.round((b.rawAmount / maxAmount) * 100));
+            height = Math.max(10, Math.round((Math.abs(b.rawAmount) / maxAmount) * 100));
           }
           return {
             ...b,

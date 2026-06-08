@@ -85,13 +85,15 @@ export default function HomepageScreen() {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Biến động tuần này</Text>
-            <View style={styles.badgePositive}>
-              <Text style={styles.badgePositiveText}>{weeklyNetFlow}</Text>
+            <View style={weeklyNetFlow.startsWith('-') ? styles.badgeNegative : styles.badgePositive}>
+              <Text style={weeklyNetFlow.startsWith('-') ? styles.badgeNegativeText : styles.badgePositiveText}>
+                {weeklyNetFlow}
+              </Text>
             </View>
           </View>
           <View style={styles.chartContainer}>
             {weeklyChartBars.map((bar, index) => (
-              <ChartBar key={index} day={bar.day} height={bar.height} />
+              <ChartBar key={index} day={bar.day} height={bar.height} rawAmount={bar.rawAmount} />
             ))}
           </View>
         </View>
@@ -140,14 +142,19 @@ const ActionIcon = ({ icon, label, onPress }: { icon: any, label: string, onPres
   </TouchableOpacity>
 );
 
-const ChartBar = ({ day, height }: { day: string, height: number }) => (
-  <View style={styles.chartBarWrapper}>
-    <View style={styles.chartBarBg}>
-      <View style={[styles.chartBarFill, { height: `${height}%` }]} />
+const ChartBar = ({ day, height, rawAmount }: { day: string, height: number, rawAmount: number }) => {
+  const isNegative = rawAmount < 0;
+  const barColor = isNegative ? '#D32F2F' : '#388E3C'; // Red if minus money, Green if positive/neutral
+  
+  return (
+    <View style={styles.chartBarWrapper}>
+      <View style={styles.chartBarBg}>
+        <View style={[styles.chartBarFill, { height: `${height}%`, backgroundColor: barColor }]} />
+      </View>
+      <Text style={styles.chartDay}>{day}</Text>
     </View>
-    <Text style={styles.chartDay}>{day}</Text>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -317,6 +324,17 @@ const styles = StyleSheet.create({
   },
   badgePositiveText: {
     color: '#388E3C',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  badgeNegative: {
+    backgroundColor: '#FFEBEE',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  badgeNegativeText: {
+    color: '#D32F2F',
     fontSize: 12,
     fontWeight: 'bold',
   },

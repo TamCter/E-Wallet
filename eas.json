@@ -9,7 +9,8 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://noctdqzhvnlaaqnixmni.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5vY3RkcXpodm5sYWFxbml4bW5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MDExNjksImV4cCI6MjA4ODE3NzE2OX0.uPkF-nkQe88Vfonedhet0banNQxlNfMvZsP-W5DknDU"
-      }
+      },
+      "channel": "preview"
     }
   }
 }

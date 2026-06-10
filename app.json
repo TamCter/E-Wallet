@@ -52,6 +52,12 @@
         "projectId": "60dccbed-997a-4f0e-90cd-32598c6beb84"
       }
     },
-    "owner": "zen1311"
+    "owner": "zen1311",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/60dccbed-997a-4f0e-90cd-32598c6beb84"
+    }
   }
 }

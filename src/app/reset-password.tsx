@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,35 +14,6 @@ export default function ResetPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Capture a stable mount timestamp to keep renders pure and prevent UI flashing
-  const nowRef = useRef<number>(Date.now());
-
-  // Validate the short-lived verification artifact (token)
-  const isTokenValid = useMemo(() => {
-    if (!token) return false;
-    // Validate JWT signature/HMAC and expiry on the simulated server side
-    const result = backendApi.validateVerificationTokenSync(token, nowRef.current);
-    return result.isValid;
-  }, [token]);
-
-  if (!isTokenValid) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={[styles.content, { justifyContent: 'center', padding: 24 }]}>
-          <Ionicons name="alert-circle-outline" size={48} color="#D32F2F" style={{ marginBottom: 16 }} />
-          <Text style={{ color: '#D32F2F', fontSize: 16, fontWeight: 'bold', textAlign: 'center', marginBottom: 24 }}>
-            Yêu cầu xác thực OTP trước khi đặt lại mật khẩu.
-          </Text>
-          <Button
-            title="Quay lại"
-            onPress={() => router.replace('/forgot-password')}
-            style={{ width: '100%' }}
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   // Simple validation logic
   const hasMinLength = password.length >= 8;
   const hasUpperCase = /[A-Z]/.test(password);
@@ -52,6 +23,17 @@ export default function ResetPasswordScreen() {
 
   const handleUpdatePassword = () => {
     if (isFormValid) {
+      // Validate the token imperatively when the user submits using the simulated server-side check
+      const validation = backendApi.validateVerificationTokenSync(token || '', Date.now());
+      if (!validation.isValid) {
+        Alert.alert(
+          'Lỗi xác thực',
+          'Yêu cầu xác thực OTP trước khi đặt lại mật khẩu.',
+          [{ text: 'Quay lại', onPress: () => router.replace('/forgot-password') }]
+        );
+        return;
+      }
+
       setLoading(true);
       // Simulate API call
       setTimeout(() => {

@@ -1,6 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider, Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
-import { useColorScheme } from 'react-native';
-import { useEffect } from 'react';
+import { useColorScheme, View, Text, StyleSheet, Alert, BackHandler, ActivityIndicator } from 'react-native';
+import { useEffect, useState } from 'react';
+import * as Updates from 'expo-updates';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
@@ -68,6 +69,63 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    async function checkAndApplyUpdates() {
+      if (__DEV__) {
+        setIsChecking(false);
+        return;
+      }
+
+      try {
+        setIsChecking(true);
+        const update = await Updates.checkForUpdateAsync();
+
+        if (update.isAvailable) {
+          Alert.alert(
+            "Cập Nhật Bắt Buộc",
+            "Đã có phiên bản mới ổn định hơn. Vui lòng cập nhật để tiếp tục sử dụng ví điện tử.",
+            [
+              {
+                text: "Cập nhật ngay",
+                onPress: async () => {
+                  setIsChecking(true);
+                  await Updates.fetchUpdateAsync();
+                  await Updates.reloadAsync();
+                }
+              },
+              {
+                text: "Thoát app",
+                onPress: () => {
+                  BackHandler.exitApp();
+                },
+                style: "destructive"
+              }
+            ],
+            { cancelable: false }
+          );
+        } else {
+          setIsChecking(false);
+        }
+      } catch (error) {
+        console.log("Lỗi check update:", error);
+        setIsChecking(false);
+      }
+    }
+
+    checkAndApplyUpdates();
+  }, []);
+
+  if (isChecking) {
+    return (
+      <View style={styles.updateContainer}>
+        <ActivityIndicator size="large" color="#0544B3" />
+        <Text style={styles.updateText}>Đang kiểm tra hệ thống...</Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <AuthProvider>
@@ -80,3 +138,18 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  updateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+  },
+  updateText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#666',
+  },
+});

@@ -39,30 +39,30 @@ export default function RegisterScreen() {
             <View style={styles.iconContainer}>
               <Ionicons name="wallet-outline" size={32} color="#0544B3" />
             </View>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join Digital Wallet to manage your finances securely.</Text>
+            <Text style={styles.title}>Tạo tài khoản</Text>
+            <Text style={styles.subtitle}>Tham gia Ví điện tử để quản lý tài chính của bạn một cách an toàn.</Text>
           </View>
 
           <View style={styles.form}>
             <AuthInput
-              label="Full Name"
+              label="Họ và tên"
               icon="person-outline"
-              placeholder="John Doe"
+              placeholder="Nguyễn Văn A"
               value={name}
               onChangeText={setName}
             />
 
             <AuthInput
-              label="Email Address"
+              label="Địa chỉ Email"
               icon="mail-outline"
-              placeholder="john@example.com"
+              placeholder="user@example.com"
               keyboardType="email-address"
               autoCapitalize="none"
               value={email}
               onChangeText={setEmail}
             />
 
-            <Text style={styles.phoneLabel}>Phone Number</Text>
+            <Text style={styles.phoneLabel}>Số điện thoại</Text>
             <View style={styles.phoneInputContainer}>
               <Dropdown
                 style={[styles.dropdown, isFocus && { borderColor: '#0544B3' }]}
@@ -101,26 +101,28 @@ export default function RegisterScreen() {
             </View>
 
             <AuthInput
-              label="Password"
+              label="Mật khẩu"
               icon="lock-closed-outline"
               placeholder="••••••••"
               isPassword
               value={password}
               onChangeText={setPassword}
             />
-            <Text style={styles.hint}>Must be at least 8 characters.</Text>
+            <Text style={styles.hint}>Mật khẩu phải dài ít nhất 8 ký tự.</Text>
+            <Text style={styles.hint}>Phải chứa ít nhất một chữ cái viết hoa.</Text>
+            <Text style={styles.hint}>Phải chứa ít nhất một chữ số.</Text>
 
             <Button
-              title="Sign Up →"
+              title="Đăng ký →"
               onPress={handleRegister}
               loading={loading}
               style={styles.registerBtn}
             />
 
             <View style={styles.loginContainer}>
-              <Text style={styles.loginText}>Already have an account? </Text>
+              <Text style={styles.loginText}>Đã có tài khoản? </Text>
               <TouchableOpacity onPress={() => router.push('/login')}>
-                <Text style={styles.loginLink}>Log in</Text>
+                <Text style={styles.loginLink}>Đăng nhập</Text>
               </TouchableOpacity>
             </View>
           </View>

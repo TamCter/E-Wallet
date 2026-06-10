@@ -36,7 +36,14 @@ export function useForgotPasswordLogic() {
 
     timeoutRef.current = setTimeout(() => {
       setLoading(false);
-      router.push('/otp-verification');
+      router.push({
+        pathname: '/otp-verification',
+        params: {
+          phone: cleanPhone,
+          phoneCountryCode: '+84',
+          flow: 'forgot-password'
+        }
+      });
     }, 1500);
   };
 

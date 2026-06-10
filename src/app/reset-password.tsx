@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -13,20 +13,17 @@ export default function ResetPasswordScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [now, setNow] = useState<number | null>(null);
 
-  // Capture stable mount timestamp to keep renders pure
-  useEffect(() => {
-    setNow(Date.now());
-  }, []);
+  // Capture a stable mount timestamp to keep renders pure and prevent UI flashing
+  const nowRef = useRef<number>(Date.now());
 
   // Validate the short-lived verification artifact (token)
   const isTokenValid = useMemo(() => {
-    if (!token || now === null) return false;
+    if (!token) return false;
     // Validate JWT signature/HMAC and expiry on the simulated server side
-    const result = backendApi.validateVerificationTokenSync(token, now);
+    const result = backendApi.validateVerificationTokenSync(token, nowRef.current);
     return result.isValid;
-  }, [token, now]);
+  }, [token]);
 
   if (!isTokenValid) {
     return (

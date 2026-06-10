@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { TransactionItem } from '@/components/ui/TransactionItem';
 import { useHomeLogic } from '@/logic/useHomeLogic';
 import { useNotificationsLogic } from '@/logic/useNotificationsLogic';
@@ -22,12 +22,6 @@ export default function HomepageScreen() {
   } = useHomeLogic();
 
   const { hasUnread } = useNotificationsLogic();
-
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchHomeData();
-    }, [fetchHomeData])
-  );
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN').format(amount);

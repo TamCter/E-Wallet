@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 export interface RecentTransaction {
   id: string;
@@ -19,6 +20,7 @@ export interface ChartBarData {
 }
 
 export function useHomeLogic() {
+  const { user } = useAuth();
   const [userData, setUserData] = useState<{ fullName: string } | null>(null);
   const [balance, setBalance] = useState<number>(0);
   const [showBalance, setShowBalance] = useState<boolean>(false);
@@ -27,21 +29,20 @@ export function useHomeLogic() {
   const [weeklyNetFlow, setWeeklyNetFlow] = useState<string>('+0 đ');
   const [weeklyChartBars, setWeeklyChartBars] = useState<ChartBarData[]>([]);
 
-  const fetchHomeData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-
-      // 1. Get current auth user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error in home logic:', authError);
-        setIsLoading(false);
-        return;
-      }
-
-      // Set user metadata
+  // Sync userData with auth state reactively
+  useEffect(() => {
+    if (user) {
       const fullName = user.user_metadata?.full_name || 'Người dùng';
       setUserData({ fullName });
+    } else {
+      setUserData(null);
+    }
+  }, [user]);
+
+  const fetchHomeData = useCallback(async () => {
+    if (!user) return;
+    try {
+      setIsLoading(true);
 
       // 2. Fetch user's wallet
       const { data: wallet, error: walletError } = await supabase
@@ -242,9 +243,65 @@ export function useHomeLogic() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchHomeData();
-  }, [fetchHomeData]);
+    if (user) {
+      fetchHomeData();
+    }
+  }, [fetchHomeData, user]);
+
+  // Realtime subscription for transactions matching the user's wallet
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let active = true;
+    let channel: any = null;
+
+    const setupRealtime = async () => {
+      try {
+        const { data: wallet } = await supabase
+          .from('wallets')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!wallet || !active) return;
+        const userWalletId = wallet.id;
+
+        channel = supabase
+          .channel(`home-txs-${user.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'transactions',
+            },
+            async (payload) => {
+              const newTx = payload.new;
+              if (newTx.sender_wallet_id === userWalletId || newTx.receiver_wallet_id === userWalletId) {
+                if (active) {
+                  fetchHomeData();
+                }
+              }
+            }
+          );
+
+        if (active) {
+          channel.subscribe();
+        }
+      } catch (err) {
+        console.error('Error setting up home realtime subscription:', err);
+      }
+    };
+
+    setupRealtime();
+
+    return () => {
+      active = false;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [user?.id, fetchHomeData]);
 
   return {
     userData,

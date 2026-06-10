@@ -19,7 +19,7 @@ export default function SplashScreen() {
       <View style={styles.iconContainer}>
         <Ionicons name="wallet" size={48} color="#0544B3" />
       </View>
-      <Text style={styles.title}>Digital Wallet</Text>
+      <Text style={styles.title}>Ví Điện Tử</Text>
       
       <View style={styles.loaderContainer}>
         <ActivityIndicator size="large" color="#ffffff" />

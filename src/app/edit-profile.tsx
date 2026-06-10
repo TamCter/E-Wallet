@@ -56,10 +56,9 @@ export default function EditProfileScreen() {
           {/* Profile Picture */}
           <View style={styles.avatarSection}>
             <View style={styles.avatarContainer}>
-              <Image
-                source={require('@/assets/images/default_avatar.png')}
-                style={styles.avatarImage}
-              />
+              <View style={[styles.avatarImage, { backgroundColor: '#F0F4FF', justifyContent: 'center', alignItems: 'center' }]}>
+                <Ionicons name="person" size={48} color="#0544B3" />
+              </View>
               <TouchableOpacity style={styles.editBadge} activeOpacity={0.7}>
                 <Ionicons name="pencil" size={14} color="#fff" />
               </TouchableOpacity>

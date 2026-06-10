@@ -21,7 +21,13 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   iconColor,
   displayAmount,
 }) => {
-  const formattedAmount = displayAmount || (amount > 0 ? `+$${amount.toFixed(2)}` : `-$${Math.abs(amount).toFixed(2)}`);
+  const formattedAmount = displayAmount || (
+    amount === 0
+      ? '0 VND'
+      : amount > 0
+        ? `+${new Intl.NumberFormat('vi-VN').format(amount)} VND`
+        : `-${new Intl.NumberFormat('vi-VN').format(Math.abs(amount))} VND`
+  );
   const amountColor = amount > 0 ? '#00A86B' : '#1a1a1a';
 
   return (

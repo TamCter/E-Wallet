@@ -17,7 +17,18 @@ export function useForgotPasswordLogic() {
   }, []);
 
   const handleContinue = () => {
-    let cleanPhone = phone.replace(/\D/g, '');
+    let cc = '+84';
+    let cleanPhone = phone.trim();
+
+    if (cleanPhone.startsWith('+')) {
+      const match = cleanPhone.match(/^\+(\d{1,4})/);
+      if (match) {
+        cc = '+' + match[1];
+        cleanPhone = cleanPhone.substring(match[0].length);
+      }
+    }
+
+    cleanPhone = cleanPhone.replace(/\D/g, '');
     if (cleanPhone.startsWith('0')) {
       cleanPhone = cleanPhone.substring(1);
     }
@@ -36,7 +47,14 @@ export function useForgotPasswordLogic() {
 
     timeoutRef.current = setTimeout(() => {
       setLoading(false);
-      router.push('/otp-verification');
+      router.push({
+        pathname: '/otp-verification',
+        params: {
+          phone: cleanPhone,
+          phoneCountryCode: cc,
+          flow: 'forgot-password'
+        }
+      });
     }, 1500);
   };
 

@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { AuthInput } from '@/components/ui/AuthInput';
+import { backendApi } from '@/lib/backendApi';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const { token } = useLocalSearchParams<{ token?: string }>();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,6 +23,17 @@ export default function ResetPasswordScreen() {
 
   const handleUpdatePassword = () => {
     if (isFormValid) {
+      // Validate the token imperatively when the user submits using the simulated server-side check
+      const validation = backendApi.validateVerificationTokenSync(token || '', Date.now());
+      if (!validation.isValid) {
+        Alert.alert(
+          'Lỗi xác thực',
+          'Yêu cầu xác thực OTP trước khi đặt lại mật khẩu.',
+          [{ text: 'Quay lại', onPress: () => router.replace('/forgot-password') }]
+        );
+        return;
+      }
+
       setLoading(true);
       // Simulate API call
       setTimeout(() => {

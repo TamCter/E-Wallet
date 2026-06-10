@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 export default function ScanScreen() {
   return (
     <View style={styles.container}>
-      <Text>Scan Screen Placeholder</Text>
+      <Text>Màn hình quét mã QR</Text>
     </View>
   );
 }

@@ -19,8 +19,24 @@ export function useRegisterLogic() {
       return;
     }
 
+    // Kiểm tra định dạng email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert('Lỗi', 'Định dạng email không hợp lệ (Ví dụ: user@example.com)');
+      return;
+    }
+
+    // Kiểm tra độ dài mật khẩu
     if (password.length < 8) {
       Alert.alert('Lỗi', 'Mật khẩu phải chứa ít nhất 8 ký tự');
+      return;
+    }
+
+    // Kiểm tra độ bảo mật mật khẩu (phải chứa chữ hoa và chữ số)
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    if (!hasUpperCase || !hasNumber) {
+      Alert.alert('Lỗi', 'Mật khẩu phải chứa ít nhất 1 chữ cái viết hoa và 1 chữ số');
       return;
     }
 
@@ -68,11 +84,14 @@ export function useRegisterLogic() {
       if (error) {
         Alert.alert('Đăng ký thất bại', error.message);
       } else {
-        Alert.alert(
-          'Thành công',
-          'Đăng ký tài khoản thành công! Bạn có thể tiến hành đăng nhập.',
-          [{ text: 'OK', onPress: () => router.replace('/login') }]
-        );
+        router.push({
+          pathname: '/otp-verification',
+          params: {
+            phone: cleanPhone,
+            phoneCountryCode: cleanCountryCode,
+            flow: 'register'
+          }
+        });
       }
     } catch (err: any) {
       Alert.alert('Lỗi hệ thống', 'Không thể kết nối đến máy chủ.');

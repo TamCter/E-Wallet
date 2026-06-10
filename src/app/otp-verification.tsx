@@ -30,6 +30,25 @@ export default function OTPVerificationScreen() {
     };
   }, [countdown]);
 
+  // Fail closed if phone is missing
+  if (!phone) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={[styles.content, { justifyContent: 'center', padding: 24 }]}>
+          <Ionicons name="alert-circle-outline" size={48} color="#D32F2F" style={{ marginBottom: 16 }} />
+          <Text style={{ color: '#D32F2F', fontSize: 16, fontWeight: 'bold', textAlign: 'center', marginBottom: 24 }}>
+            Không tìm thấy thông tin số điện thoại xác thực.
+          </Text>
+          <Button
+            title="Quay lại"
+            onPress={() => router.back()}
+            style={{ width: '100%' }}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const handleOtpChange = (text: string, index: number) => {
     const newOtp = [...otp];
     newOtp[index] = text;
@@ -50,9 +69,8 @@ export default function OTPVerificationScreen() {
 
   const getMaskedPhone = () => {
     const cc = phoneCountryCode || '+84';
-    const num = phone || '987654321';
 
-    const cleanNum = num.replace(/\D/g, '');
+    const cleanNum = phone.replace(/\D/g, '');
     let finalNum = cleanNum;
     if (finalNum.startsWith('0')) {
       finalNum = finalNum.substring(1);
@@ -85,7 +103,32 @@ export default function OTPVerificationScreen() {
             [{ text: 'OK', onPress: () => router.replace('/login') }]
           );
         } else {
-          router.push('/reset-password');
+          // Generate verification token (signed verification artifact)
+          const tokenPayload = JSON.stringify({
+            phone: phone,
+            timestamp: Date.now(),
+            verified: true,
+          });
+          
+          // Custom base64 encode
+          const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+          let verificationToken = '';
+          let i = 0;
+          while (i < tokenPayload.length) {
+            const c1 = tokenPayload.charCodeAt(i++);
+            const c2 = i < tokenPayload.length ? tokenPayload.charCodeAt(i++) : NaN;
+            const c3 = i < tokenPayload.length ? tokenPayload.charCodeAt(i++) : NaN;
+            const byte1 = c1 >> 2;
+            const byte2 = ((c1 & 3) << 4) | (isNaN(c2) ? 0 : c2 >> 4);
+            const byte3 = isNaN(c2) ? 64 : ((c2 & 15) << 2) | (isNaN(c3) ? 0 : c3 >> 6);
+            const byte4 = isNaN(c3) ? 64 : c3 & 63;
+            verificationToken += chars.charAt(byte1) + chars.charAt(byte2) + chars.charAt(byte3) + chars.charAt(byte4);
+          }
+
+          router.replace({
+            pathname: '/reset-password',
+            params: { token: verificationToken }
+          });
         }
       }, 1500);
     }

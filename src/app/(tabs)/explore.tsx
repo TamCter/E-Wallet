@@ -62,10 +62,10 @@ export default function TabTwoScreen() {
           <Collapsible title="Định tuyến dựa trên file (File-based routing)">
             <ThemedText type="small">
               Ứng dụng này có hai màn hình chính: <ThemedText type="code">src/app/index.tsx</ThemedText> và{' '}
-              <ThemedText type="code">src/app/explore.tsx</ThemedText>
+              <ThemedText type="code">src/app/(tabs)/explore.tsx</ThemedText>
             </ThemedText>
             <ThemedText type="small">
-              File layout tại <ThemedText type="code">src/app/_layout.tsx</ThemedText> thiết lập
+              File layout tại <ThemedText type="code">src/app/(tabs)/_layout.tsx</ThemedText> thiết lập
               thanh điều hướng tab.
             </ThemedText>
             <ExternalLink href="https://docs.expo.dev/router/introduction">

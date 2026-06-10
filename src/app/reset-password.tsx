@@ -1,16 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { AuthInput } from '@/components/ui/AuthInput';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const { token } = useLocalSearchParams<{ token?: string }>();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Validate the short-lived verification artifact (token)
+  const isTokenValid = useMemo(() => {
+    if (!token) return false;
+    try {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+      let decoded = '';
+      let i = 0;
+      while (i < token.length) {
+        const byte1 = chars.indexOf(token.charAt(i++));
+        const byte2 = chars.indexOf(token.charAt(i++));
+        const byte3 = chars.indexOf(token.charAt(i++));
+        const byte4 = chars.indexOf(token.charAt(i++));
+        if (byte1 === -1 || byte2 === -1 || byte3 === -1 || byte4 === -1) return false;
+        const c1 = (byte1 << 2) | (byte2 >> 4);
+        const c2 = ((byte2 & 15) << 4) | (byte3 >> 2);
+        const c3 = ((byte3 & 3) << 6) | byte4;
+        decoded += String.fromCharCode(c1);
+        if (byte3 !== 64) decoded += String.fromCharCode(c2);
+        if (byte4 !== 64) decoded += String.fromCharCode(c3);
+      }
+      const payload = JSON.parse(decoded);
+      if (payload.verified === true && payload.phone && payload.timestamp) {
+        const age = Date.now() - payload.timestamp;
+        // Token valid for 5 minutes
+        return age > 0 && age < 5 * 60 * 1000;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, [token]);
+
+  if (!isTokenValid) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={[styles.content, { justifyContent: 'center', padding: 24 }]}>
+          <Ionicons name="alert-circle-outline" size={48} color="#D32F2F" style={{ marginBottom: 16 }} />
+          <Text style={{ color: '#D32F2F', fontSize: 16, fontWeight: 'bold', textAlign: 'center', marginBottom: 24 }}>
+            Yêu cầu xác thực OTP trước khi đặt lại mật khẩu.
+          </Text>
+          <Button
+            title="Quay lại"
+            onPress={() => router.replace('/forgot-password')}
+            style={{ width: '100%' }}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // Simple validation logic
   const hasMinLength = password.length >= 8;

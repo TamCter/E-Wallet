@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
+import { backendApi } from '@/lib/backendApi';
 
 const OTP_LENGTH = 6;
 
@@ -94,41 +95,27 @@ export default function OTPVerificationScreen() {
     if (otpString.length === OTP_LENGTH) {
       setLoading(true);
       // Simulate API call
-      setTimeout(() => {
-        setLoading(false);
+      setTimeout(async () => {
         if (flow === 'register') {
+          setLoading(false);
           Alert.alert(
             'Thành công',
             'Đăng ký tài khoản thành công! Bạn có thể tiến hành đăng nhập.',
             [{ text: 'OK', onPress: () => router.replace('/login') }]
           );
         } else {
-          // Generate verification token (signed verification artifact)
-          const tokenPayload = JSON.stringify({
-            phone: phone,
-            timestamp: Date.now(),
-            verified: true,
-          });
-          
-          // Custom base64 encode
-          const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-          let verificationToken = '';
-          let i = 0;
-          while (i < tokenPayload.length) {
-            const c1 = tokenPayload.charCodeAt(i++);
-            const c2 = i < tokenPayload.length ? tokenPayload.charCodeAt(i++) : NaN;
-            const c3 = i < tokenPayload.length ? tokenPayload.charCodeAt(i++) : NaN;
-            const byte1 = c1 >> 2;
-            const byte2 = ((c1 & 3) << 4) | (isNaN(c2) ? 0 : c2 >> 4);
-            const byte3 = isNaN(c2) ? 64 : ((c2 & 15) << 2) | (isNaN(c3) ? 0 : c3 >> 6);
-            const byte4 = isNaN(c3) ? 64 : c3 & 63;
-            verificationToken += chars.charAt(byte1) + chars.charAt(byte2) + chars.charAt(byte3) + chars.charAt(byte4);
+          try {
+            // Call backend API endpoint to issue a signed token
+            const token = await backendApi.issueVerificationToken(phone);
+            setLoading(false);
+            router.replace({
+              pathname: '/reset-password',
+              params: { token }
+            });
+          } catch (e) {
+            setLoading(false);
+            Alert.alert('Lỗi', 'Có lỗi xảy ra khi xác thực OTP.');
           }
-
-          router.replace({
-            pathname: '/reset-password',
-            params: { token: verificationToken }
-          });
         }
       }, 1500);
     }

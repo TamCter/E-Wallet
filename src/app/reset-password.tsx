@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { AuthInput } from '@/components/ui/AuthInput';
+import { backendApi } from '@/lib/backendApi';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -12,38 +13,20 @@ export default function ResetPasswordScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [now, setNow] = useState<number | null>(null);
+
+  // Capture stable mount timestamp to keep renders pure
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
 
   // Validate the short-lived verification artifact (token)
   const isTokenValid = useMemo(() => {
-    if (!token) return false;
-    try {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-      let decoded = '';
-      let i = 0;
-      while (i < token.length) {
-        const byte1 = chars.indexOf(token.charAt(i++));
-        const byte2 = chars.indexOf(token.charAt(i++));
-        const byte3 = chars.indexOf(token.charAt(i++));
-        const byte4 = chars.indexOf(token.charAt(i++));
-        if (byte1 === -1 || byte2 === -1 || byte3 === -1 || byte4 === -1) return false;
-        const c1 = (byte1 << 2) | (byte2 >> 4);
-        const c2 = ((byte2 & 15) << 4) | (byte3 >> 2);
-        const c3 = ((byte3 & 3) << 6) | byte4;
-        decoded += String.fromCharCode(c1);
-        if (byte3 !== 64) decoded += String.fromCharCode(c2);
-        if (byte4 !== 64) decoded += String.fromCharCode(c3);
-      }
-      const payload = JSON.parse(decoded);
-      if (payload.verified === true && payload.phone && payload.timestamp) {
-        const age = Date.now() - payload.timestamp;
-        // Token valid for 5 minutes
-        return age > 0 && age < 5 * 60 * 1000;
-      }
-      return false;
-    } catch {
-      return false;
-    }
-  }, [token]);
+    if (!token || now === null) return false;
+    // Validate JWT signature/HMAC and expiry on the simulated server side
+    const result = backendApi.validateVerificationTokenSync(token, now);
+    return result.isValid;
+  }, [token, now]);
 
   if (!isTokenValid) {
     return (

@@ -21,6 +21,16 @@ export function useServicesLogic() {
   const [error, setError] = useState<string | null>(null);
   const [lastTransactionId, setLastTransactionId] = useState<string | null>(null);
 
+  const [subscriptionCycle, setSubscriptionCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [activeSubscriptions, setActiveSubscriptions] = useState<Record<string, {
+    serviceId: string;
+    cycle: string;
+    price: number;
+    registeredAt: string;
+    expiresAt: string;
+    autoRenew?: boolean;
+  }>>({});
+
   const fetchWalletBalance = useCallback(async () => {
     try {
       setLoadingBalance(true);
@@ -48,9 +58,69 @@ export function useServicesLogic() {
     }
   }, []);
 
+  const fetchActiveSubscriptions = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const subKey = `${user.id}_active_subscriptions`;
+      let subs: Record<string, any> = {};
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('subscriptions')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (!error && data && data.subscriptions) {
+          subs = data.subscriptions;
+        } else {
+          const stored = await safeStorage.getItem(subKey);
+          if (stored) {
+            subs = JSON.parse(stored);
+          }
+        }
+      } catch (dbErr) {
+        const stored = await safeStorage.getItem(subKey);
+        if (stored) {
+          subs = JSON.parse(stored);
+        }
+      }
+
+      // Cleanup expired subscriptions
+      const now = new Date().getTime();
+      let hasChanges = false;
+      Object.keys(subs).forEach((key) => {
+        const expiresAt = new Date(subs[key].expiresAt).getTime();
+        if (now > expiresAt) {
+          delete subs[key];
+          hasChanges = true;
+        }
+      });
+
+      if (hasChanges) {
+        await safeStorage.setItem(subKey, JSON.stringify(subs));
+        try {
+          await supabase
+            .from('users')
+            .update({ subscriptions: subs })
+            .eq('id', user.id);
+        } catch (dbErr) {
+          console.warn("DB update skipped or subscriptions column not ready:", dbErr);
+        }
+      }
+
+      setActiveSubscriptions(subs);
+    } catch (err) {
+      console.error("Lỗi lấy thông tin đăng ký dịch vụ:", err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchWalletBalance();
-  }, [fetchWalletBalance]);
+    fetchActiveSubscriptions();
+  }, [fetchWalletBalance, fetchActiveSubscriptions]);
 
   const handleSelectService = (service: ServiceType) => {
     setSelectedService(service);
@@ -161,6 +231,45 @@ export function useServicesLogic() {
 
       await safeStorage.setItem('services_payments', JSON.stringify(localPayments));
 
+      // Save to active subscriptions if it's a premium service
+      if (selectedService && ['youtube', 'spotify', 'netflix'].includes(selectedService)) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const subKey = `${user.id}_active_subscriptions`;
+          const stored = await safeStorage.getItem(subKey);
+          const currentSubs = stored ? JSON.parse(stored) : {};
+
+          const registeredAt = new Date();
+          const expiresAt = new Date(registeredAt);
+          if (subscriptionCycle === 'yearly') {
+            expiresAt.setFullYear(registeredAt.getFullYear() + 1);
+          } else {
+            expiresAt.setMonth(registeredAt.getMonth() + 1);
+          }
+
+          currentSubs[selectedService] = {
+            serviceId: selectedService,
+            cycle: subscriptionCycle,
+            price: amount,
+            registeredAt: registeredAt.toISOString(),
+            expiresAt: expiresAt.toISOString(),
+            autoRenew: true,
+          };
+
+          await safeStorage.setItem(subKey, JSON.stringify(currentSubs));
+          setActiveSubscriptions(currentSubs);
+
+          try {
+            await supabase
+              .from('users')
+              .update({ subscriptions: currentSubs })
+              .eq('id', user.id);
+          } catch (dbErr) {
+            console.warn("DB update skipped or subscriptions column not ready:", dbErr);
+          }
+        }
+      }
+
       setLastTransactionId(transactionId);
       setIsSuccess(true);
       await fetchWalletBalance();
@@ -180,6 +289,44 @@ export function useServicesLogic() {
     setIsSuccess(false);
     setError(null);
     setLastTransactionId(null);
+    setSubscriptionCycle('monthly');
+  };
+
+  const handleCancelSubscription = async (serviceId: string) => {
+    try {
+      setIsProcessing(true);
+      setError(null);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Chưa đăng nhập");
+
+      const subKey = `${user.id}_active_subscriptions`;
+      const stored = await safeStorage.getItem(subKey);
+      const currentSubs = stored ? JSON.parse(stored) : {};
+
+      if (currentSubs[serviceId]) {
+        currentSubs[serviceId].autoRenew = false;
+      }
+
+      await safeStorage.setItem(subKey, JSON.stringify(currentSubs));
+      setActiveSubscriptions(currentSubs);
+
+      try {
+        await supabase
+          .from('users')
+          .update({ subscriptions: currentSubs })
+          .eq('id', user.id);
+      } catch (dbErr) {
+        console.warn("DB update skipped or subscriptions column not ready:", dbErr);
+      }
+
+      setIsSuccess(true);
+    } catch (err: any) {
+      console.error("Lỗi khi hủy đăng ký gói:", err);
+      setError(err?.message || "Không thể hủy đăng ký gói dịch vụ này");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return {
@@ -193,9 +340,13 @@ export function useServicesLogic() {
     isSuccess,
     error,
     lastTransactionId,
+    subscriptionCycle,
+    setSubscriptionCycle,
+    activeSubscriptions,
     handleSelectService,
     handleLookupBill,
     handlePay,
+    handleCancelSubscription,
     resetStates,
   };
 }

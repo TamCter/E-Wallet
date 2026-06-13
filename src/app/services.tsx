@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,11 +29,77 @@ export default function ServicesScreen() {
     isSuccess,
     error,
     lastTransactionId,
+    subscriptionCycle,
+    setSubscriptionCycle,
+    activeSubscriptions,
     handleSelectService,
     handleLookupBill,
     handlePay,
+    handleCancelSubscription,
     resetStates,
   } = useServicesLogic();
+
+  const getRemainingDays = (expiresAtStr: string) => {
+    const expiresAt = new Date(expiresAtStr);
+    const diffTime = expiresAt.getTime() - new Date().getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
+
+  const renderPremiumCard = (
+    serviceId: ServiceType,
+    monthlyPrice: number,
+    desc: string,
+    icon: any,
+    bgColor: string,
+    iconColor: string
+  ) => {
+    const sub = activeSubscriptions[serviceId];
+    const isSubscribed = sub && getRemainingDays(sub.expiresAt) > 0;
+    const isAutoRenew = isSubscribed && sub.autoRenew !== false;
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.premiumListItem,
+          isSubscribed && (isAutoRenew ? styles.premiumListItemActive : styles.premiumListItemPending)
+        ]}
+        onPress={() => handleSelectService(serviceId)}
+      >
+        <View style={[styles.premiumIconContainer, { backgroundColor: bgColor }]}>
+          <Ionicons name={icon} size={24} color={iconColor} />
+        </View>
+        <View style={styles.premiumTextContainer}>
+          <Text style={styles.premiumName}>{getServiceDetails(serviceId).title}</Text>
+          {isSubscribed ? (
+            isAutoRenew ? (
+              <View style={styles.activeSubBadge}>
+                <Ionicons name="checkmark-circle-sharp" size={12} color="#2E7D32" style={{ marginRight: 4 }} />
+                <Text style={styles.activeSubText}>
+                  Đang hoạt động • Còn {getRemainingDays(sub.expiresAt)} ngày
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.activeSubBadge}>
+                <Ionicons name="close-circle-sharp" size={12} color="#E65100" style={{ marginRight: 4 }} />
+                <Text style={[styles.activeSubText, { color: '#E65100' }]}>
+                  Hủy gia hạn • Còn {getRemainingDays(sub.expiresAt)} ngày
+                </Text>
+              </View>
+            )
+          ) : (
+            <Text style={styles.premiumDesc} numberOfLines={1}>{desc}</Text>
+          )}
+        </View>
+        <Text style={[
+          styles.premiumPrice,
+          isSubscribed && (isAutoRenew ? styles.premiumPriceActive : styles.premiumPricePending)
+        ]}>
+          {isSubscribed ? 'Đang dùng' : `${formatCurrency(monthlyPrice)} đ`}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('vi-VN').format(value);
@@ -71,17 +138,33 @@ export default function ServicesScreen() {
     } else {
       const details = getServiceDetails(selectedService);
       if (details.price) {
+        const finalPrice = subscriptionCycle === 'yearly' ? details.price * 10 : details.price;
+        const cycleText = subscriptionCycle === 'yearly' ? 'Đăng ký Premium 1 năm' : 'Đăng ký Premium hàng tháng';
         handlePay(
-          details.price,
+          finalPrice,
           details.title,
-          'Đăng ký Premium hàng tháng'
+          cycleText
         );
       }
     }
   };
 
+  const handleCancelSubClick = () => {
+    if (!selectedService) return;
+    Alert.alert(
+      'Xác nhận hủy',
+      `Bạn có chắc chắn muốn hủy đăng ký gói dịch vụ này?`,
+      [
+        { text: 'Quay lại', style: 'cancel' },
+        { text: 'Hủy đăng ký', style: 'destructive', onPress: () => handleCancelSubscription(selectedService) }
+      ]
+    );
+  };
+
   const isUtility = selectedService && ['electricity', 'water', 'wifi'].includes(selectedService);
   const activeDetails = selectedService ? getServiceDetails(selectedService) : null;
+  const hasActiveSub = selectedService && activeSubscriptions[selectedService] && getRemainingDays(activeSubscriptions[selectedService].expiresAt) > 0;
+  const isCancelledSuccess = isSuccess && selectedService && !isUtility && (!activeSubscriptions[selectedService] || getRemainingDays(activeSubscriptions[selectedService].expiresAt) === 0);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -149,49 +232,13 @@ export default function ServicesScreen() {
         <Text style={[styles.sectionTitle, { marginTop: 28 }]}>Gói dịch vụ Premium</Text>
         
         {/* YouTube Premium Card */}
-        <TouchableOpacity
-          style={styles.premiumListItem}
-          onPress={() => handleSelectService('youtube')}
-        >
-          <View style={[styles.premiumIconContainer, { backgroundColor: '#FFEBEE' }]}>
-            <Ionicons name="logo-youtube" size={24} color="#FF0000" />
-          </View>
-          <View style={styles.premiumTextContainer}>
-            <Text style={styles.premiumName}>YouTube Premium</Text>
-            <Text style={styles.premiumDesc} numberOfLines={1}>Xem video không quảng cáo & phát nền</Text>
-          </View>
-          <Text style={styles.premiumPrice}>79.000 đ</Text>
-        </TouchableOpacity>
+        {renderPremiumCard('youtube', 79000, 'Xem video không quảng cáo & phát nền', 'logo-youtube', '#FFEBEE', '#FF0000')}
 
         {/* Spotify Premium Card */}
-        <TouchableOpacity
-          style={styles.premiumListItem}
-          onPress={() => handleSelectService('spotify')}
-        >
-          <View style={[styles.premiumIconContainer, { backgroundColor: '#E8F5E9' }]}>
-            <Ionicons name="headset-outline" size={24} color="#1DB954" />
-          </View>
-          <View style={styles.premiumTextContainer}>
-            <Text style={styles.premiumName}>Spotify Premium</Text>
-            <Text style={styles.premiumDesc} numberOfLines={1}>Nghe nhạc chất lượng cao & offline</Text>
-          </View>
-          <Text style={styles.premiumPrice}>59.000 đ</Text>
-        </TouchableOpacity>
+        {renderPremiumCard('spotify', 59000, 'Nghe nhạc chất lượng cao & offline', 'headset-outline', '#E8F5E9', '#1DB954')}
 
         {/* Netflix Premium Card */}
-        <TouchableOpacity
-          style={styles.premiumListItem}
-          onPress={() => handleSelectService('netflix')}
-        >
-          <View style={[styles.premiumIconContainer, { backgroundColor: '#FFE5E5' }]}>
-            <Ionicons name="videocam-outline" size={24} color="#E50914" />
-          </View>
-          <View style={styles.premiumTextContainer}>
-            <Text style={styles.premiumName}>Netflix Premium</Text>
-            <Text style={styles.premiumDesc} numberOfLines={1}>Xem phim bom tấn chất lượng 4K HDR</Text>
-          </View>
-          <Text style={styles.premiumPrice}>180.000 đ</Text>
-        </TouchableOpacity>
+        {renderPremiumCard('netflix', 180000, 'Xem phim bom tấn chất lượng 4K HDR', 'videocam-outline', '#FFE5E5', '#E50914')}
       </ScrollView>
 
       {/* Payment Overlay Sheet (Acts as Modal) */}
@@ -206,7 +253,9 @@ export default function ServicesScreen() {
             {/* Sheet Header */}
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>
-                {isSuccess ? 'Thanh toán thành công' : activeDetails?.title}
+                {isSuccess
+                  ? (isCancelledSuccess ? 'Hủy gói thành công' : 'Thanh toán thành công')
+                  : (hasActiveSub ? 'Quản lý gói Premium' : activeDetails?.title)}
               </Text>
               {!isProcessing && !isSuccess && (
                 <TouchableOpacity onPress={resetStates}>
@@ -231,33 +280,67 @@ export default function ServicesScreen() {
               {/* Success State */}
               {isSuccess ? (
                 <View style={styles.successContainer}>
-                  <View style={styles.successBadge}>
-                    <Ionicons name="checkmark-sharp" size={48} color="#2E7D32" />
-                  </View>
-                  <Text style={styles.successTitle}>Giao dịch hoàn tất</Text>
-                  
-                  <View style={styles.receiptContainer}>
-                    <View style={styles.receiptRow}>
-                      <Text style={styles.receiptLabel}>Dịch vụ:</Text>
-                      <Text style={styles.receiptValue}>{activeDetails?.title}</Text>
-                    </View>
-                    {isUtility && customerCode && (
-                      <View style={styles.receiptRow}>
-                        <Text style={styles.receiptLabel}>Mã khách hàng:</Text>
-                        <Text style={[styles.receiptValue, { textTransform: 'uppercase' }]}>{customerCode}</Text>
+                  {isCancelledSuccess ? (
+                    <>
+                      <View style={[styles.successBadge, { backgroundColor: '#FFEBEE' }]}>
+                        <Ionicons name="trash-outline" size={44} color="#D32F2F" />
                       </View>
-                    )}
-                    <View style={styles.receiptRow}>
-                      <Text style={styles.receiptLabel}>Số tiền đã trả:</Text>
-                      <Text style={[styles.receiptValue, { color: '#0544B3', fontWeight: 'bold' }]}>
-                        {formatCurrency(isUtility ? simulatedBill?.amount || 0 : activeDetails?.price || 0)} đ
-                      </Text>
-                    </View>
-                    <View style={styles.receiptRow}>
-                      <Text style={styles.receiptLabel}>Mã giao dịch:</Text>
-                      <Text style={[styles.receiptValue, { fontSize: 11, color: '#666' }]}>{lastTransactionId}</Text>
-                    </View>
-                  </View>
+                      <Text style={[styles.successTitle, { color: '#D32F2F' }]}>Hủy đăng ký thành công</Text>
+                      
+                      <View style={styles.receiptContainer}>
+                        <View style={styles.receiptRow}>
+                          <Text style={styles.receiptLabel}>Dịch vụ:</Text>
+                          <Text style={styles.receiptValue}>{activeDetails?.title}</Text>
+                        </View>
+                        <View style={styles.receiptRow}>
+                          <Text style={styles.receiptLabel}>Trạng thái:</Text>
+                          <Text style={[styles.receiptValue, { color: '#D32F2F', fontWeight: 'bold' }]}>Đã hủy tự động gia hạn</Text>
+                        </View>
+                        <View style={styles.receiptRow}>
+                          <Text style={styles.receiptLabel}>Ngày thực hiện:</Text>
+                          <Text style={styles.receiptValue}>{new Date().toLocaleDateString('vi-VN')}</Text>
+                        </View>
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <View style={styles.successBadge}>
+                        <Ionicons name="checkmark-sharp" size={48} color="#2E7D32" />
+                      </View>
+                      <Text style={styles.successTitle}>Giao dịch hoàn tất</Text>
+                      
+                      <View style={styles.receiptContainer}>
+                        <View style={styles.receiptRow}>
+                          <Text style={styles.receiptLabel}>Dịch vụ:</Text>
+                          <Text style={styles.receiptValue}>{activeDetails?.title}</Text>
+                        </View>
+                        {isUtility && customerCode && (
+                          <View style={styles.receiptRow}>
+                            <Text style={styles.receiptLabel}>Mã khách hàng:</Text>
+                            <Text style={[styles.receiptValue, { textTransform: 'uppercase' }]}>{customerCode}</Text>
+                          </View>
+                        )}
+                        <View style={styles.receiptRow}>
+                          <Text style={styles.receiptLabel}>Số tiền đã trả:</Text>
+                          <Text style={[styles.receiptValue, { color: '#0544B3', fontWeight: 'bold' }]}>
+                            {formatCurrency(isUtility ? simulatedBill?.amount || 0 : (subscriptionCycle === 'yearly' ? (activeDetails?.price || 0) * 10 : (activeDetails?.price || 0)))} đ
+                          </Text>
+                        </View>
+                        {!isUtility && (
+                          <View style={styles.receiptRow}>
+                            <Text style={styles.receiptLabel}>Hạn sử dụng:</Text>
+                            <Text style={[styles.receiptValue, { color: '#2E7D32', fontWeight: 'bold' }]}>
+                              Đến {new Date(new Date().getTime() + (subscriptionCycle === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN')}
+                            </Text>
+                          </View>
+                        )}
+                        <View style={styles.receiptRow}>
+                          <Text style={styles.receiptLabel}>Mã giao dịch:</Text>
+                          <Text style={[styles.receiptValue, { fontSize: 11, color: '#666' }]}>{lastTransactionId}</Text>
+                        </View>
+                      </View>
+                    </>
+                  )}
 
                   <TouchableOpacity style={styles.primaryButton} onPress={resetStates}>
                     <Text style={styles.primaryButtonText}>Xong</Text>
@@ -287,9 +370,13 @@ export default function ServicesScreen() {
                           <TouchableOpacity
                             style={styles.primaryButton}
                             onPress={handleLookupBill}
-                            disabled={isProcessing}
+                            disabled={isProcessing || !customerCode.trim()}
                           >
-                            <Text style={styles.primaryButtonText}>Tra cứu hóa đơn</Text>
+                            {isProcessing ? (
+                              <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                              <Text style={styles.primaryButtonText}>Tra cứu hóa đơn</Text>
+                            )}
                           </TouchableOpacity>
                         </View>
                       ) : (
@@ -329,19 +416,125 @@ export default function ServicesScreen() {
                         </View>
                       )}
                     </View>
+                  ) : hasActiveSub ? (
+                    /* MANAGE ACTIVE PREMIUM SUBSCRIPTION */
+                    <View>
+                      <View style={styles.billDetailsCard}>
+                        <View style={styles.billRow}>
+                          <Text style={styles.billLabel}>Trạng thái:</Text>
+                          <Text style={[styles.billVal, { color: activeSubscriptions[selectedService].autoRenew !== false ? '#2E7D32' : '#E65100' }]}>
+                            {activeSubscriptions[selectedService].autoRenew !== false ? 'Đang hoạt động' : 'Đang chờ hủy'}
+                          </Text>
+                        </View>
+                        <View style={styles.billRow}>
+                          <Text style={styles.billLabel}>Gói đăng ký:</Text>
+                          <Text style={styles.billVal}>
+                            {activeSubscriptions[selectedService].cycle === 'yearly' ? '1 Năm (Đã giảm giá)' : '1 Tháng'}
+                          </Text>
+                        </View>
+                        <View style={styles.billRow}>
+                          <Text style={styles.billLabel}>Giá cước cũ:</Text>
+                          <Text style={styles.billVal}>{formatCurrency(activeSubscriptions[selectedService].price)} đ</Text>
+                        </View>
+                        <View style={styles.billRow}>
+                          <Text style={styles.billLabel}>Ngày hết hạn:</Text>
+                          <Text style={[styles.billVal, { color: '#D32F2F', fontWeight: 'bold' }]}>
+                            {new Date(activeSubscriptions[selectedService].expiresAt).toLocaleDateString('vi-VN')}
+                          </Text>
+                        </View>
+                        <View style={styles.billRow}>
+                          <Text style={styles.billLabel}>Còn lại:</Text>
+                          <Text style={styles.billVal}>
+                            {getRemainingDays(activeSubscriptions[selectedService].expiresAt)} ngày
+                          </Text>
+                        </View>
+                        <View style={styles.billDivider} />
+                        <Text style={styles.premiumConfirmDesc}>
+                          {activeSubscriptions[selectedService].autoRenew !== false
+                            ? 'Gói cước premium của bạn đang hoạt động bình thường. Khi bạn bấm hủy, dịch vụ sẽ dừng tự động gia hạn khi hết hạn dùng hiện tại.'
+                            : 'Bạn đã hủy tự động gia hạn cho gói này. Gói vẫn tiếp tục sử dụng bình thường cho đến khi hết hạn. Bạn không thể đăng ký lại cho đến khi hết thời hạn.'}
+                        </Text>
+                      </View>
+
+                      {activeSubscriptions[selectedService].autoRenew !== false ? (
+                        <TouchableOpacity
+                          style={[styles.primaryButton, { backgroundColor: '#C62828' }]}
+                          onPress={handleCancelSubClick}
+                          disabled={isProcessing}
+                        >
+                          {isProcessing ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                          ) : (
+                            <Text style={styles.primaryButtonText}>Hủy đăng ký gói</Text>
+                          )}
+                        </TouchableOpacity>
+                      ) : (
+                        <View style={[styles.primaryButton, { backgroundColor: '#B0BEC5' }]}>
+                          <Text style={styles.primaryButtonText}>Đã hủy gia hạn</Text>
+                        </View>
+                      )}
+                    </View>
                   ) : (
                     /* PREMIUM SUBSCRIPTION CONFIRMATION */
                     <View>
+                      <Text style={styles.inputLabel}>Chọn thời hạn đăng ký:</Text>
+                      <View style={styles.cycleSelector}>
+                        <TouchableOpacity
+                          style={[
+                            styles.cycleOption,
+                            subscriptionCycle === 'monthly' && styles.cycleOptionActive
+                          ]}
+                          onPress={() => setSubscriptionCycle('monthly')}
+                        >
+                          <Text style={[
+                            styles.cycleOptionText,
+                            subscriptionCycle === 'monthly' && styles.cycleOptionTextActive
+                          ]}>1 Tháng</Text>
+                          <Text style={[
+                            styles.cycleOptionSubtext,
+                            subscriptionCycle === 'monthly' && styles.cycleOptionSubtextActive
+                          ]}>
+                            {formatCurrency(activeDetails?.price || 0)} đ
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.cycleOption,
+                            subscriptionCycle === 'yearly' && styles.cycleOptionActive
+                          ]}
+                          onPress={() => setSubscriptionCycle('yearly')}
+                        >
+                          <View style={styles.saveBadge}>
+                            <Text style={styles.saveBadgeText}>Tiết kiệm 2 tháng</Text>
+                          </View>
+                          <Text style={[
+                            styles.cycleOptionText,
+                            subscriptionCycle === 'yearly' && styles.cycleOptionTextActive
+                          ]}>1 Năm</Text>
+                          <Text style={[
+                            styles.cycleOptionSubtext,
+                            subscriptionCycle === 'yearly' && styles.cycleOptionSubtextActive
+                          ]}>
+                            {formatCurrency((activeDetails?.price || 0) * 10)} đ
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
                       <View style={styles.billDetailsCard}>
                         <Text style={styles.premiumConfirmDesc}>{activeDetails?.desc}</Text>
                         <View style={styles.billDivider} />
                         <View style={styles.billRow}>
-                          <Text style={styles.billLabelTotal}>Cước dịch vụ:</Text>
-                          <Text style={styles.billValTotal}>{formatCurrency(activeDetails?.price || 0)} đ / tháng</Text>
+                          <Text style={styles.billLabelTotal}>Tổng tiền thanh toán:</Text>
+                          <Text style={styles.billValTotal}>
+                            {formatCurrency(subscriptionCycle === 'yearly' ? (activeDetails?.price || 0) * 10 : (activeDetails?.price || 0))} đ
+                          </Text>
                         </View>
                         <View style={styles.billRow}>
                           <Text style={styles.billLabel}>Chu kỳ:</Text>
-                          <Text style={styles.billVal}>Hàng tháng (Gia hạn tự động)</Text>
+                          <Text style={styles.billVal}>
+                            {subscriptionCycle === 'yearly' ? '12 tháng (Gia hạn sau 1 năm)' : 'Hàng tháng (Gia hạn tự động)'}
+                          </Text>
                         </View>
                       </View>
 
@@ -476,6 +669,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
   premiumIconContainer: {
     width: 44,
@@ -673,5 +868,81 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: 'bold',
     color: '#333333',
+  },
+  cycleSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    width: '100%',
+  },
+  cycleOption: {
+    flex: 0.48,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    position: 'relative',
+    backgroundColor: '#FAFAFA',
+  },
+  cycleOptionActive: {
+    borderColor: '#0544B3',
+    backgroundColor: '#F0F5FF',
+  },
+  cycleOptionText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 4,
+  },
+  cycleOptionTextActive: {
+    color: '#0544B3',
+  },
+  cycleOptionSubtext: {
+    fontSize: 13,
+    color: '#666666',
+  },
+  cycleOptionSubtextActive: {
+    color: '#0544B3',
+    fontWeight: '600',
+  },
+  saveBadge: {
+    position: 'absolute',
+    top: -10,
+    backgroundColor: '#E50914',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  saveBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  activeSubBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  activeSubText: {
+    fontSize: 11,
+    color: '#2E7D32',
+    fontWeight: '600',
+  },
+  premiumListItemActive: {
+    borderColor: '#C8E6C9',
+    backgroundColor: '#F4FBF7',
+  },
+  premiumListItemPending: {
+    borderColor: '#FFE0B2',
+    backgroundColor: '#FFFDE7',
+  },
+  premiumPriceActive: {
+    color: '#2E7D32',
+    fontWeight: '600',
+  },
+  premiumPricePending: {
+    color: '#E65100',
+    fontWeight: '600',
   },
 });

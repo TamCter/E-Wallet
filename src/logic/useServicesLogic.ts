@@ -98,7 +98,7 @@ export function useServicesLogic() {
             subs = JSON.parse(stored);
           }
         }
-      } catch (dbErr) {
+      } catch {
         const stored = await safeStorage.getItem(subKey);
         if (stored) {
           subs = JSON.parse(stored);
@@ -127,8 +127,11 @@ export function useServicesLogic() {
   }, []);
 
   useEffect(() => {
-    fetchWalletBalance();
-    fetchActiveSubscriptions();
+    const timer = setTimeout(() => {
+      fetchWalletBalance();
+      fetchActiveSubscriptions();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchWalletBalance, fetchActiveSubscriptions]);
 
   const handleSelectService = (service: ServiceType) => {

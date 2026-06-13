@@ -67,18 +67,12 @@ export function useServicesLogic() {
       let subs: Record<string, any> = {};
 
       try {
-        // First clean up expired subscriptions in DB
-        await supabase
-          .from('subscriptions')
-          .delete()
-          .eq('user_id', user.id)
-          .lt('expires_at', new Date().toISOString());
-
-        // Fetch remaining active subscriptions
+        // Fetch active subscriptions (where expires_at is in the future)
         const { data, error } = await supabase
           .from('subscriptions')
           .select('*')
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .gt('expires_at', new Date().toISOString());
 
         if (!error && data) {
           data.forEach((sub: any) => {

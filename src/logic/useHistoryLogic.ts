@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface FormattedTransaction {
   id: string;
@@ -104,9 +105,20 @@ export function useHistoryLogic() {
         return;
       }
 
+      let servicesPayments: any = {};
+      try {
+        const stored = await AsyncStorage.getItem('services_payments');
+        if (stored) {
+          servicesPayments = JSON.parse(stored);
+        }
+      } catch (storageErr) {
+        console.error('Lỗi khi đọc services_payments từ AsyncStorage:', storageErr);
+      }
+
       if (dbTransactions) {
         const formatted: FormattedTransaction[] = dbTransactions.map((tx: any) => {
           const isIncoming = tx.receiver_wallet_id === userWalletId || tx.receiver_wallet?.id === userWalletId;
+          const serviceMeta = servicesPayments[tx.id];
           const date = new Date(tx.created_at);
           const hours = String(date.getHours()).padStart(2, '0');
           const minutes = String(date.getMinutes()).padStart(2, '0');
@@ -127,8 +139,13 @@ export function useHistoryLogic() {
             title = 'Nạp tiền vào ví';
             typeLabel = 'Nạp tiền';
           } else if (tx.type === 'withdrawal') {
-            title = 'Rút tiền khỏi ví';
-            typeLabel = 'Rút tiền';
+            if (serviceMeta) {
+              title = serviceMeta.title;
+              typeLabel = 'Thanh toán';
+            } else {
+              title = 'Rút tiền khỏi ví';
+              typeLabel = 'Rút tiền';
+            }
           } else {
             // Transfer type
             if (isIncoming) {
@@ -142,7 +159,7 @@ export function useHistoryLogic() {
             }
           }
 
-          const subtitle = `${timeFormatted} • ${typeLabel}`;
+          const subtitle = serviceMeta ? `${timeFormatted} • ${serviceMeta.subtitle || typeLabel}` : `${timeFormatted} • ${typeLabel}`;
 
           // Amount styling
           const numAmount = parseFloat(tx.amount);
@@ -170,7 +187,11 @@ export function useHistoryLogic() {
           let iconBgColor = '#E3F2FD';
           let iconColor = '#0544B3';
 
-          if (lowerTitle.includes('shopee') || lowerTitle.includes('lazada') || lowerTitle.includes('tiki') || lowerTitle.includes('mua sắm') || lowerTitle.includes('shopping') || lowerTitle.includes('cửa hàng')) {
+          if (serviceMeta) {
+            iconName = serviceMeta.iconName || 'receipt-outline';
+            iconColor = serviceMeta.iconColor || '#00838F';
+            iconBgColor = serviceMeta.iconBgColor || '#E0F7FA';
+          } else if (lowerTitle.includes('shopee') || lowerTitle.includes('lazada') || lowerTitle.includes('tiki') || lowerTitle.includes('mua sắm') || lowerTitle.includes('shopping') || lowerTitle.includes('cửa hàng')) {
             iconName = 'cart-outline';
             iconBgColor = '#F5F5F5';
             iconColor = '#616161';

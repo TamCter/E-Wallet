@@ -78,7 +78,7 @@ export default function HomepageScreen() {
           <ActionIcon icon="paper-plane-outline" label="Chuyển tiền" onPress={() => router.push('/transfer' as any)} />
           <ActionIcon icon="qr-code-outline" label="Quét mã QR" />
           <ActionIcon icon="phone-portrait-outline" label="Nạp ĐT" />
-          <ActionIcon icon="receipt-outline" label="Hóa đơn" />
+          <ActionIcon icon="grid-outline" label="Dịch vụ" onPress={() => router.push('/services' as any)} />
         </View>
 
         {/* Weekly Flow Chart */}

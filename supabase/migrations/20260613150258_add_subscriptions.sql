@@ -3,7 +3,7 @@ ALTER TABLE public.users DROP COLUMN IF EXISTS subscriptions;
 
 -- Create a dedicated subscriptions table
 CREATE TABLE IF NOT EXISTS public.subscriptions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     service_id VARCHAR(50) NOT NULL, -- e.g. 'youtube', 'spotify', 'netflix'
     cycle VARCHAR(20) NOT NULL CHECK (cycle IN ('monthly', 'yearly')),

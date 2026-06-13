@@ -40,12 +40,7 @@ export default function ServicesScreen() {
     resetStates,
   } = useServicesLogic();
 
-  const getRemainingDays = (expiresAtStr: string) => {
-    const expiresAt = new Date(expiresAtStr);
-    const diffTime = expiresAt.getTime() - new Date().getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 0;
-  };
+  const currentSub = selectedService ? activeSubscriptions[selectedService] : undefined;
 
   const renderPremiumCard = (
     serviceId: ServiceType,
@@ -56,7 +51,7 @@ export default function ServicesScreen() {
     iconColor: string
   ) => {
     const sub = activeSubscriptions[serviceId];
-    const isSubscribed = sub && getRemainingDays(sub.expiresAt) > 0;
+    const isSubscribed = sub && calculateRemainingDays(sub.expiresAt) > 0;
     const isAutoRenew = isSubscribed && sub.autoRenew !== false;
 
     return (
@@ -77,14 +72,14 @@ export default function ServicesScreen() {
               <View style={styles.activeSubBadge}>
                 <Ionicons name="checkmark-circle-sharp" size={12} color="#2E7D32" style={{ marginRight: 4 }} />
                 <Text style={styles.activeSubText}>
-                  Đang hoạt động • Còn {getRemainingDays(sub.expiresAt)} ngày
+                  Đang hoạt động • Còn {calculateRemainingDays(sub.expiresAt)} ngày
                 </Text>
               </View>
             ) : (
               <View style={styles.activeSubBadge}>
                 <Ionicons name="close-circle-sharp" size={12} color="#E65100" style={{ marginRight: 4 }} />
                 <Text style={[styles.activeSubText, { color: '#E65100' }]}>
-                  Hủy gia hạn • Còn {getRemainingDays(sub.expiresAt)} ngày
+                  Hủy gia hạn • Còn {calculateRemainingDays(sub.expiresAt)} ngày
                 </Text>
               </View>
             )
@@ -102,9 +97,7 @@ export default function ServicesScreen() {
     );
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('vi-VN').format(value);
-  };
+
 
   const getServiceDetails = (service: ServiceType) => {
     switch (service) {
@@ -164,8 +157,8 @@ export default function ServicesScreen() {
 
   const isUtility = selectedService && ['electricity', 'water', 'wifi'].includes(selectedService);
   const activeDetails = selectedService ? getServiceDetails(selectedService) : null;
-  const hasActiveSub = selectedService && activeSubscriptions[selectedService] && getRemainingDays(activeSubscriptions[selectedService].expiresAt) > 0;
-  const isCancelledSuccess = isSuccess && selectedService && !isUtility && (!activeSubscriptions[selectedService] || getRemainingDays(activeSubscriptions[selectedService].expiresAt) === 0);
+  const hasActiveSub = !!currentSub && calculateRemainingDays(currentSub.expiresAt) > 0;
+  const isCancelledSuccess = isSuccess && selectedService && !isUtility && (!currentSub || calculateRemainingDays(currentSub.expiresAt) === 0);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -423,41 +416,41 @@ export default function ServicesScreen() {
                       <View style={styles.billDetailsCard}>
                         <View style={styles.billRow}>
                           <Text style={styles.billLabel}>Trạng thái:</Text>
-                          <Text style={[styles.billVal, { color: activeSubscriptions[selectedService].autoRenew !== false ? '#2E7D32' : '#E65100' }]}>
-                            {activeSubscriptions[selectedService].autoRenew !== false ? 'Đang hoạt động' : 'Đang chờ hủy'}
+                          <Text style={[styles.billVal, { color: currentSub.autoRenew !== false ? '#2E7D32' : '#E65100' }]}>
+                            {currentSub.autoRenew !== false ? 'Đang hoạt động' : 'Đang chờ hủy'}
                           </Text>
                         </View>
                         <View style={styles.billRow}>
                           <Text style={styles.billLabel}>Gói đăng ký:</Text>
                           <Text style={styles.billVal}>
-                            {activeSubscriptions[selectedService].cycle === 'yearly' ? '1 Năm (Đã giảm giá)' : '1 Tháng'}
+                            {currentSub.cycle === 'yearly' ? '1 Năm (Đã giảm giá)' : '1 Tháng'}
                           </Text>
                         </View>
                         <View style={styles.billRow}>
                           <Text style={styles.billLabel}>Giá cước cũ:</Text>
-                          <Text style={styles.billVal}>{formatCurrency(activeSubscriptions[selectedService].price)} đ</Text>
+                          <Text style={styles.billVal}>{formatCurrency(currentSub.price)} đ</Text>
                         </View>
                         <View style={styles.billRow}>
                           <Text style={styles.billLabel}>Ngày hết hạn:</Text>
                           <Text style={[styles.billVal, { color: '#D32F2F', fontWeight: 'bold' }]}>
-                            {new Date(activeSubscriptions[selectedService].expiresAt).toLocaleDateString('vi-VN')}
+                            {new Date(currentSub.expiresAt).toLocaleDateString('vi-VN')}
                           </Text>
                         </View>
                         <View style={styles.billRow}>
                           <Text style={styles.billLabel}>Còn lại:</Text>
                           <Text style={styles.billVal}>
-                            {getRemainingDays(activeSubscriptions[selectedService].expiresAt)} ngày
+                            {calculateRemainingDays(currentSub.expiresAt)} ngày
                           </Text>
                         </View>
                         <View style={styles.billDivider} />
                         <Text style={styles.premiumConfirmDesc}>
-                          {activeSubscriptions[selectedService].autoRenew !== false
+                          {currentSub.autoRenew !== false
                             ? 'Gói cước premium của bạn đang hoạt động bình thường. Khi bạn bấm hủy, dịch vụ sẽ dừng tự động gia hạn khi hết hạn dùng hiện tại.'
                             : 'Bạn đã hủy tự động gia hạn cho gói này. Gói vẫn tiếp tục sử dụng bình thường cho đến khi hết hạn. Bạn không thể đăng ký lại cho đến khi hết thời hạn.'}
                         </Text>
                       </View>
 
-                      {activeSubscriptions[selectedService].autoRenew !== false ? (
+                      {currentSub.autoRenew !== false ? (
                         <TouchableOpacity
                           style={[styles.primaryButton, { backgroundColor: '#C62828' }]}
                           onPress={handleCancelSubClick}

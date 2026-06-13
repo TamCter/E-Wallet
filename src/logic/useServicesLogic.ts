@@ -321,14 +321,14 @@ export function useServicesLogic() {
       await safeStorage.setItem(subKey, JSON.stringify(currentSubs));
       setActiveSubscriptions(currentSubs);
 
-      try {
-        await supabase
-          .from('subscriptions')
-          .update({ auto_renew: false })
-          .eq('user_id', user.id)
-          .eq('service_id', serviceId);
-      } catch (dbErr) {
-        console.warn("DB update skipped or subscriptions table not ready:", dbErr);
+      const { error: dbErr } = await supabase
+        .from('subscriptions')
+        .update({ auto_renew: false })
+        .eq('user_id', user.id)
+        .eq('service_id', serviceId);
+
+      if (dbErr) {
+        console.warn("DB update failed:", dbErr.message);
       }
 
       setIsSuccess(true);

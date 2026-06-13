@@ -246,12 +246,18 @@ export function useServicesLogic() {
           const currentSubs = stored ? JSON.parse(stored) : {};
 
           const registeredAt = new Date();
-          const expiresAt = new Date(registeredAt);
-          if (subscriptionCycle === 'yearly') {
-            expiresAt.setFullYear(registeredAt.getFullYear() + 1);
-          } else {
-            expiresAt.setMonth(registeredAt.getMonth() + 1);
-          }
+          const targetYear = subscriptionCycle === 'yearly' ? registeredAt.getFullYear() + 1 : registeredAt.getFullYear();
+          const targetMonth = subscriptionCycle === 'yearly' ? registeredAt.getMonth() : registeredAt.getMonth() + 1;
+          const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+          const expiresAt = new Date(
+            targetYear,
+            targetMonth,
+            Math.min(registeredAt.getDate(), lastDay),
+            registeredAt.getHours(),
+            registeredAt.getMinutes(),
+            registeredAt.getSeconds(),
+            registeredAt.getMilliseconds()
+          );
 
           currentSubs[selectedService] = {
             serviceId: selectedService,

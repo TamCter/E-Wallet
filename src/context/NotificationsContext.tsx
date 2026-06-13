@@ -1,5 +1,4 @@
 import React, { createContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Platform } from 'react-native';
 import { safeStorage } from '@/utils/safeStorage';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
@@ -38,8 +37,6 @@ interface NotificationsContextType {
 }
 
 export const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
-
-const isBrowser = typeof window !== 'undefined';
 
 const storage = safeStorage;
 
@@ -261,13 +258,14 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
         if (sub.autoRenew !== false && daysRemaining > 0 && daysRemaining <= 7) {
           const formattedExpiry = expiresAt.toLocaleDateString('vi-VN');
           const notificationId = `sub-expiry-${sub.serviceId}-${sub.expiresAt}`;
+          const stableCreatedAt = new Date(expiresAt.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
           subNotifications.push({
             id: notificationId,
             title: `Gói ${serviceNames[sub.serviceId] || sub.serviceId} sắp hết hạn`,
             subtitle: `Gói Premium của bạn sẽ hết hạn vào ngày ${formattedExpiry} (còn ${daysRemaining} ngày). Vui lòng gia hạn để tránh gián đoạn dịch vụ.`,
             type: 'system',
-            createdAt: new Date().toISOString(),
+            createdAt: stableCreatedAt,
             isRead: parsedRead.includes(notificationId)
           });
         }

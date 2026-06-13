@@ -6,6 +6,11 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function main() {
+  if (process.env.NODE_ENV !== 'test' && process.env.ENABLE_TEST_RPCS !== 'true') {
+    console.warn('Skipping state-changing RPC tests: NODE_ENV is not "test" and ENABLE_TEST_RPCS is not "true".');
+    return;
+  }
+
   console.log('Testing RPCs...');
   
   // Try calling process_deposit with a mock/safe check or list what functions are available

@@ -14,7 +14,7 @@ export const safeStorage = {
       }
       return await SecureStore.getItemAsync(key);
     } catch (err) {
-      console.error(`Error in safeStorage.getItem for key ${key}:`, err);
+      console.error('Error in safeStorage.getItem for key <redacted_key>:', err);
       return null;
     }
   },
@@ -24,12 +24,15 @@ export const safeStorage = {
       if (Platform.OS === 'web') {
         if (isBrowser) {
           window.localStorage.setItem(key, value);
+        } else {
+          throw new Error('localStorage is not available (not in browser)');
         }
         return;
       }
       await SecureStore.setItemAsync(key, value);
     } catch (err) {
-      console.error(`Error in safeStorage.setItem for key ${key}:`, err);
+      console.error('Error in safeStorage.setItem for key <redacted_key>:', err);
+      throw err;
     }
   }
 };

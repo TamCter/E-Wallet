@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useServicesLogic, ServiceType } from '@/logic/useServicesLogic';
+import { formatCurrency, calculateRemainingDays } from '@/utils/math';
 
 export default function ServicesScreen() {
   const router = useRouter();

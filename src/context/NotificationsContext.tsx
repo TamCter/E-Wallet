@@ -4,6 +4,7 @@ import { safeStorage } from '@/utils/safeStorage';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
+import { calculateRemainingDays } from '@/utils/math';
 import { useToast } from './ToastContext';
 
 const DEBUG = false;

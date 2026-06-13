@@ -62,6 +62,7 @@ function RootLayoutNav() {
         <Stack.Screen name="security" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="admin" />
+        <Stack.Screen name="services" />
       </Stack>
     </ThemeProvider>
   );

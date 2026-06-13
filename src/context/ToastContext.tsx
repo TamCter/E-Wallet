@@ -47,8 +47,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const pendingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Animation values
-  const translateY = useRef(new Animated.Value(-120)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const [translateY] = useState(() => new Animated.Value(-120));
+  const [opacity] = useState(() => new Animated.Value(0));
 
   const hideToast = useCallback(() => {
     if (timerRef.current) {

@@ -1,10 +1,9 @@
 import React, { createContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeStorage } from '@/utils/safeStorage';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
+import { calculateRemainingDays } from '@/utils/math';
 import { useToast } from './ToastContext';
 
 const DEBUG = false;
@@ -39,28 +38,7 @@ interface NotificationsContextType {
 
 export const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
-const isBrowser = typeof window !== 'undefined';
-
-const storage = {
-  getItem: async (key: string) => {
-    if (Platform.OS === 'web') {
-      if (isBrowser) {
-        return AsyncStorage.getItem(key);
-      }
-      return null;
-    }
-    return SecureStore.getItemAsync(key);
-  },
-  setItem: async (key: string, value: string) => {
-    if (Platform.OS === 'web') {
-      if (isBrowser) {
-        return AsyncStorage.setItem(key, value);
-      }
-      return;
-    }
-    return SecureStore.setItemAsync(key, value);
-  },
-};
+const storage = safeStorage;
 
 export const NotificationsProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
@@ -103,6 +81,18 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
       const storedDeleted = await storage.getItem(deletedKey);
       const parsedDeleted: string[] = storedDeleted ? JSON.parse(storedDeleted) : [];
       setDeletedIds(parsedDeleted);
+
+      // Load active subscriptions to generate expiry alerts if within 7 days
+      const subKey = `${user.id}_active_subscriptions`;
+      const storedSubs = await storage.getItem(subKey);
+      const activeSubs: Record<string, {
+        serviceId: string;
+        cycle: string;
+        price: number;
+        registeredAt: string;
+        expiresAt: string;
+        autoRenew?: boolean;
+      }> = storedSubs ? JSON.parse(storedSubs) : {};
 
       // Fetch user's transactions
       const { data: txs, error } = await supabase
@@ -253,8 +243,36 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
         }
       ];
 
-      // Combine both lists, filter out deleted ones, and sort by createdAt descending
-      const combined = [...txNotifications, ...staticNotifications]
+      // Generate dynamic warning notifications for subscriptions expiring within 7 days
+      const subNotifications: NotificationItem[] = [];
+      const serviceNames: Record<string, string> = {
+        youtube: 'YouTube Premium',
+        spotify: 'Spotify Premium',
+        netflix: 'Netflix Premium'
+      };
+
+      Object.values(activeSubs).forEach((sub) => {
+        const expiresAt = new Date(sub.expiresAt);
+        const daysRemaining = calculateRemainingDays(sub.expiresAt);
+
+        if (sub.autoRenew !== false && daysRemaining > 0 && daysRemaining <= 7) {
+          const formattedExpiry = expiresAt.toLocaleDateString('vi-VN');
+          const notificationId = `sub-expiry-${sub.serviceId}-${sub.expiresAt}`;
+          const stableCreatedAt = new Date(expiresAt.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+          subNotifications.push({
+            id: notificationId,
+            title: `Gói ${serviceNames[sub.serviceId] || sub.serviceId} sắp hết hạn`,
+            subtitle: `Gói Premium của bạn sẽ hết hạn vào ngày ${formattedExpiry} (còn ${daysRemaining} ngày). Vui lòng gia hạn để tránh gián đoạn dịch vụ.`,
+            type: 'system',
+            createdAt: stableCreatedAt,
+            isRead: parsedRead.includes(notificationId)
+          });
+        }
+      });
+
+      // Combine all lists, filter out deleted ones, and sort by createdAt descending
+      const combined = [...txNotifications, ...staticNotifications, ...subNotifications]
         .filter(item => !parsedDeleted.includes(item.id))
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

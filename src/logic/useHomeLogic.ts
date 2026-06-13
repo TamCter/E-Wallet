@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { safeStorage } from '@/utils/safeStorage';
 
 export interface RecentTransaction {
   id: string;
@@ -93,11 +94,22 @@ export function useHomeLogic() {
         .order('created_at', { ascending: false })
         .limit(3);
 
+      let servicesPayments: any = {};
+      try {
+        const stored = await safeStorage.getItem('services_payments');
+        if (stored) {
+          servicesPayments = JSON.parse(stored);
+        }
+      } catch (storageErr) {
+        console.error('Lỗi khi đọc services_payments từ safeStorage:', storageErr);
+      }
+
       if (txError) {
         console.error('Transactions fetch error:', txError);
       } else if (dbTransactions) {
         const formatted: RecentTransaction[] = dbTransactions.map((tx: any) => {
           const isIncoming = tx.receiver_wallet_id === userWalletId || tx.receiver_wallet?.id === userWalletId;
+          const serviceMeta = servicesPayments[tx.id];
           const date = new Date(tx.created_at);
           const hours = String(date.getHours()).padStart(2, '0');
           const minutes = String(date.getMinutes()).padStart(2, '0');
@@ -107,7 +119,11 @@ export function useHomeLogic() {
           if (tx.type === 'deposit') {
             title = 'Nạp tiền vào ví';
           } else if (tx.type === 'withdrawal') {
-            title = 'Rút tiền khỏi ví';
+            if (serviceMeta) {
+              title = serviceMeta.title;
+            } else {
+              title = 'Rút tiền khỏi ví';
+            }
           } else {
             if (isIncoming) {
               const sender = tx.sender_wallet?.users;
@@ -118,7 +134,9 @@ export function useHomeLogic() {
             }
           }
 
-          const subtitle = `${timeFormatted} • ${tx.type === 'deposit' ? 'Nạp tiền' : tx.type === 'withdrawal' ? 'Rút tiền' : isIncoming ? 'Nhận tiền' : 'Chuyển tiền'}`;
+          const subtitle = serviceMeta 
+            ? `${timeFormatted} • ${serviceMeta.subtitle || 'Thanh toán'}` 
+            : `${timeFormatted} • ${tx.type === 'deposit' ? 'Nạp tiền' : tx.type === 'withdrawal' ? 'Rút tiền' : isIncoming ? 'Nhận tiền' : 'Chuyển tiền'}`;
           const numAmount = parseFloat(tx.amount);
           const formattedVal = new Intl.NumberFormat('vi-VN').format(numAmount);
           const displayAmount = `${isIncoming ? '+' : '-'}${formattedVal} đ`;
@@ -128,7 +146,11 @@ export function useHomeLogic() {
           let iconBgColor = '#E3F2FD';
           let iconColor = '#0544B3';
 
-          if (tx.type === 'deposit') {
+          if (serviceMeta) {
+            iconName = serviceMeta.iconName || 'receipt-outline';
+            iconColor = serviceMeta.iconColor || '#00838F';
+            iconBgColor = serviceMeta.iconBgColor || '#E0F7FA';
+          } else if (tx.type === 'deposit') {
             iconName = 'add-outline';
             iconBgColor = '#E8F5E9';
             iconColor = '#2E7D32';

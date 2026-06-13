@@ -262,20 +262,20 @@ export function useServicesLogic() {
           await safeStorage.setItem(subKey, JSON.stringify(currentSubs));
           setActiveSubscriptions(currentSubs);
 
-          try {
-            await supabase
-              .from('subscriptions')
-              .upsert({
-                user_id: user.id,
-                service_id: selectedService,
-                cycle: subscriptionCycle,
-                price: amount,
-                registered_at: registeredAt.toISOString(),
-                expires_at: expiresAt.toISOString(),
-                auto_renew: true
-              }, { onConflict: 'user_id,service_id' });
-          } catch (dbErr) {
-            console.warn("DB insert/update skipped or subscriptions table not ready:", dbErr);
+          const { error: dbErr } = await supabase
+            .from('subscriptions')
+            .upsert({
+              user_id: user.id,
+              service_id: selectedService,
+              cycle: subscriptionCycle,
+              price: amount,
+              registered_at: registeredAt.toISOString(),
+              expires_at: expiresAt.toISOString(),
+              auto_renew: true
+            }, { onConflict: 'user_id,service_id' });
+
+          if (dbErr) {
+            console.warn("DB insert/update failed:", dbErr.message);
           }
         }
       }

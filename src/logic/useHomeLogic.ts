@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeStorage } from '@/utils/safeStorage';
 
 export interface RecentTransaction {
   id: string;
@@ -96,12 +96,12 @@ export function useHomeLogic() {
 
       let servicesPayments: any = {};
       try {
-        const stored = await AsyncStorage.getItem('services_payments');
+        const stored = await safeStorage.getItem('services_payments');
         if (stored) {
           servicesPayments = JSON.parse(stored);
         }
       } catch (storageErr) {
-        console.error('Lỗi khi đọc services_payments từ AsyncStorage:', storageErr);
+        console.error('Lỗi khi đọc services_payments từ safeStorage:', storageErr);
       }
 
       if (txError) {

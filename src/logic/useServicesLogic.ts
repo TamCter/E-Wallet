@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeStorage } from '@/utils/safeStorage';
 
 export type ServiceType = 'electricity' | 'water' | 'wifi' | 'youtube' | 'spotify' | 'netflix';
 
@@ -128,8 +128,8 @@ export function useServicesLogic() {
         throw new Error('Không nhận được mã giao dịch từ hệ thống');
       }
 
-      // Save custom details to AsyncStorage so transaction history/recent list can display custom labels
-      const localPaymentsStr = await AsyncStorage.getItem('services_payments');
+      // Save custom details to safeStorage so transaction history/recent list can display custom labels
+      const localPaymentsStr = await safeStorage.getItem('services_payments');
       const localPayments = localPaymentsStr ? JSON.parse(localPaymentsStr) : {};
 
       // Determine mapping styling based on service
@@ -159,7 +159,7 @@ export function useServicesLogic() {
         iconBgColor,
       };
 
-      await AsyncStorage.setItem('services_payments', JSON.stringify(localPayments));
+      await safeStorage.setItem('services_payments', JSON.stringify(localPayments));
 
       setLastTransactionId(transactionId);
       setIsSuccess(true);

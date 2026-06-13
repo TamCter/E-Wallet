@@ -1,7 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeStorage } from '@/utils/safeStorage';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
@@ -41,26 +40,7 @@ export const NotificationsContext = createContext<NotificationsContextType | und
 
 const isBrowser = typeof window !== 'undefined';
 
-const storage = {
-  getItem: async (key: string) => {
-    if (Platform.OS === 'web') {
-      if (isBrowser) {
-        return AsyncStorage.getItem(key);
-      }
-      return null;
-    }
-    return SecureStore.getItemAsync(key);
-  },
-  setItem: async (key: string, value: string) => {
-    if (Platform.OS === 'web') {
-      if (isBrowser) {
-        return AsyncStorage.setItem(key, value);
-      }
-      return;
-    }
-    return SecureStore.setItemAsync(key, value);
-  },
-};
+const storage = safeStorage;
 
 export const NotificationsProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();

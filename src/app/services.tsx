@@ -215,146 +215,152 @@ export default function ServicesScreen() {
               )}
             </View>
 
-            {/* Error Banner */}
-            {error && (
-              <View style={styles.errorBanner}>
-                <Ionicons name="alert-circle" size={20} color="#C62828" />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
-
-            {/* Success State */}
-            {isSuccess ? (
-              <View style={styles.successContainer}>
-                <View style={styles.successBadge}>
-                  <Ionicons name="checkmark-sharp" size={48} color="#2E7D32" />
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={{ width: '100%' }}
+              contentContainerStyle={{ flexGrow: 1 }}
+            >
+              {/* Error Banner */}
+              {error && (
+                <View style={styles.errorBanner}>
+                  <Ionicons name="alert-circle" size={20} color="#C62828" />
+                  <Text style={styles.errorText}>{error}</Text>
                 </View>
-                <Text style={styles.successTitle}>Giao dịch hoàn tất</Text>
-                
-                <View style={styles.receiptContainer}>
-                  <View style={styles.receiptRow}>
-                    <Text style={styles.receiptLabel}>Dịch vụ:</Text>
-                    <Text style={styles.receiptValue}>{activeDetails?.title}</Text>
+              )}
+
+              {/* Success State */}
+              {isSuccess ? (
+                <View style={styles.successContainer}>
+                  <View style={styles.successBadge}>
+                    <Ionicons name="checkmark-sharp" size={48} color="#2E7D32" />
                   </View>
-                  {isUtility && customerCode && (
+                  <Text style={styles.successTitle}>Giao dịch hoàn tất</Text>
+                  
+                  <View style={styles.receiptContainer}>
                     <View style={styles.receiptRow}>
-                      <Text style={styles.receiptLabel}>Mã khách hàng:</Text>
-                      <Text style={[styles.receiptValue, { textTransform: 'uppercase' }]}>{customerCode}</Text>
+                      <Text style={styles.receiptLabel}>Dịch vụ:</Text>
+                      <Text style={styles.receiptValue}>{activeDetails?.title}</Text>
                     </View>
-                  )}
-                  <View style={styles.receiptRow}>
-                    <Text style={styles.receiptLabel}>Số tiền đã trả:</Text>
-                    <Text style={[styles.receiptValue, { color: '#0544B3', fontWeight: 'bold' }]}>
-                      {formatCurrency(isUtility ? simulatedBill?.amount || 0 : activeDetails?.price || 0)} đ
-                    </Text>
-                  </View>
-                  <View style={styles.receiptRow}>
-                    <Text style={styles.receiptLabel}>Mã giao dịch:</Text>
-                    <Text style={[styles.receiptValue, { fontSize: 11, color: '#666' }]}>{lastTransactionId}</Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity style={styles.primaryButton} onPress={resetStates}>
-                  <Text style={styles.primaryButtonText}>Xong</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              /* Input/Confirm State */
-              <View>
-                {isUtility ? (
-                  /* UTILITY INPUT PANEL */
-                  <View>
-                    {!simulatedBill ? (
-                      <View>
-                        <Text style={styles.inputLabel}>Nhập mã khách hàng / số hợp đồng:</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          value={customerCode}
-                          onChangeText={setCustomerCode}
-                          placeholder={activeDetails?.placeholder}
-                          placeholderTextColor="#999"
-                          autoCapitalize="characters"
-                          editable={!isProcessing}
-                        />
-                        <Text style={styles.inputTip}>
-                          * Nhập đúng mã định dạng nhà cung cấp yêu cầu để tra cứu tiền nợ cước.
-                        </Text>
-                        <TouchableOpacity
-                          style={styles.primaryButton}
-                          onPress={handleLookupBill}
-                          disabled={isProcessing}
-                        >
-                          <Text style={styles.primaryButtonText}>Tra cứu hóa đơn</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
-                      /* UTILITY BILL CONFIRMATION */
-                      <View>
-                        <View style={styles.billDetailsCard}>
-                          <View style={styles.billRow}>
-                            <Text style={styles.billLabel}>Nhà cung cấp:</Text>
-                            <Text style={styles.billVal}>{simulatedBill.provider}</Text>
-                          </View>
-                          <View style={styles.billRow}>
-                            <Text style={styles.billLabel}>Khách hàng:</Text>
-                            <Text style={styles.billVal}>{simulatedBill.customerName}</Text>
-                          </View>
-                          <View style={styles.billRow}>
-                            <Text style={styles.billLabel}>Mã số:</Text>
-                            <Text style={[styles.billVal, { textTransform: 'uppercase' }]}>{customerCode}</Text>
-                          </View>
-                          <View style={styles.billDivider} />
-                          <View style={styles.billRow}>
-                            <Text style={styles.billLabelTotal}>Cước cần thanh toán:</Text>
-                            <Text style={styles.billValTotal}>{formatCurrency(simulatedBill.amount)} đ</Text>
-                          </View>
-                        </View>
-
-                        <TouchableOpacity
-                          style={[styles.primaryButton, { backgroundColor: '#2E7D32' }]}
-                          onPress={handlePayClick}
-                          disabled={isProcessing}
-                        >
-                          {isProcessing ? (
-                            <ActivityIndicator size="small" color="#fff" />
-                          ) : (
-                            <Text style={styles.primaryButtonText}>Thanh toán ngay</Text>
-                          )}
-                        </TouchableOpacity>
+                    {isUtility && customerCode && (
+                      <View style={styles.receiptRow}>
+                        <Text style={styles.receiptLabel}>Mã khách hàng:</Text>
+                        <Text style={[styles.receiptValue, { textTransform: 'uppercase' }]}>{customerCode}</Text>
                       </View>
                     )}
-                  </View>
-                ) : (
-                  /* PREMIUM SUBSCRIPTION CONFIRMATION */
-                  <View>
-                    <View style={styles.billDetailsCard}>
-                      <Text style={styles.premiumConfirmDesc}>{activeDetails?.desc}</Text>
-                      <View style={styles.billDivider} />
-                      <View style={styles.billRow}>
-                        <Text style={styles.billLabelTotal}>Cước dịch vụ:</Text>
-                        <Text style={styles.billValTotal}>{formatCurrency(activeDetails?.price || 0)} đ / tháng</Text>
-                      </View>
-                      <View style={styles.billRow}>
-                        <Text style={styles.billLabel}>Chu kỳ:</Text>
-                        <Text style={styles.billVal}>Hàng tháng (Gia hạn tự động)</Text>
-                      </View>
+                    <View style={styles.receiptRow}>
+                      <Text style={styles.receiptLabel}>Số tiền đã trả:</Text>
+                      <Text style={[styles.receiptValue, { color: '#0544B3', fontWeight: 'bold' }]}>
+                        {formatCurrency(isUtility ? simulatedBill?.amount || 0 : activeDetails?.price || 0)} đ
+                      </Text>
                     </View>
-
-                    <TouchableOpacity
-                      style={[styles.primaryButton, { backgroundColor: '#2E7D32' }]}
-                      onPress={handlePayClick}
-                      disabled={isProcessing}
-                    >
-                      {isProcessing ? (
-                        <ActivityIndicator size="small" color="#fff" />
-                      ) : (
-                        <Text style={styles.primaryButtonText}>Đăng ký ngay</Text>
-                      )}
-                    </TouchableOpacity>
+                    <View style={styles.receiptRow}>
+                      <Text style={styles.receiptLabel}>Mã giao dịch:</Text>
+                      <Text style={[styles.receiptValue, { fontSize: 11, color: '#666' }]}>{lastTransactionId}</Text>
+                    </View>
                   </View>
-                )}
-              </View>
-            )}
+
+                  <TouchableOpacity style={styles.primaryButton} onPress={resetStates}>
+                    <Text style={styles.primaryButtonText}>Xong</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                /* Input/Confirm State */
+                <View>
+                  {isUtility ? (
+                    /* UTILITY INPUT PANEL */
+                    <View>
+                      {!simulatedBill ? (
+                        <View>
+                          <Text style={styles.inputLabel}>Nhập mã khách hàng / số hợp đồng:</Text>
+                          <TextInput
+                            style={styles.textInput}
+                            value={customerCode}
+                            onChangeText={setCustomerCode}
+                            placeholder={activeDetails?.placeholder}
+                            placeholderTextColor="#999"
+                            autoCapitalize="characters"
+                            editable={!isProcessing}
+                          />
+                          <Text style={styles.inputTip}>
+                            * Nhập đúng mã định dạng nhà cung cấp yêu cầu để tra cứu tiền nợ cước.
+                          </Text>
+                          <TouchableOpacity
+                            style={styles.primaryButton}
+                            onPress={handleLookupBill}
+                            disabled={isProcessing}
+                          >
+                            <Text style={styles.primaryButtonText}>Tra cứu hóa đơn</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        /* UTILITY BILL CONFIRMATION */
+                        <View>
+                          <View style={styles.billDetailsCard}>
+                            <View style={styles.billRow}>
+                              <Text style={styles.billLabel}>Nhà cung cấp:</Text>
+                              <Text style={styles.billVal}>{simulatedBill.provider}</Text>
+                            </View>
+                            <View style={styles.billRow}>
+                              <Text style={styles.billLabel}>Khách hàng:</Text>
+                              <Text style={styles.billVal}>{simulatedBill.customerName}</Text>
+                            </View>
+                            <View style={styles.billRow}>
+                              <Text style={styles.billLabel}>Mã số:</Text>
+                              <Text style={[styles.billVal, { textTransform: 'uppercase' }]}>{customerCode}</Text>
+                            </View>
+                            <View style={styles.billDivider} />
+                            <View style={styles.billRow}>
+                              <Text style={styles.billLabelTotal}>Cước cần thanh toán:</Text>
+                              <Text style={styles.billValTotal}>{formatCurrency(simulatedBill.amount)} đ</Text>
+                            </View>
+                          </View>
+
+                          <TouchableOpacity
+                            style={[styles.primaryButton, { backgroundColor: '#2E7D32' }]}
+                            onPress={handlePayClick}
+                            disabled={isProcessing}
+                          >
+                            {isProcessing ? (
+                              <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                              <Text style={styles.primaryButtonText}>Thanh toán ngay</Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  ) : (
+                    /* PREMIUM SUBSCRIPTION CONFIRMATION */
+                    <View>
+                      <View style={styles.billDetailsCard}>
+                        <Text style={styles.premiumConfirmDesc}>{activeDetails?.desc}</Text>
+                        <View style={styles.billDivider} />
+                        <View style={styles.billRow}>
+                          <Text style={styles.billLabelTotal}>Cước dịch vụ:</Text>
+                          <Text style={styles.billValTotal}>{formatCurrency(activeDetails?.price || 0)} đ / tháng</Text>
+                        </View>
+                        <View style={styles.billRow}>
+                          <Text style={styles.billLabel}>Chu kỳ:</Text>
+                          <Text style={styles.billVal}>Hàng tháng (Gia hạn tự động)</Text>
+                        </View>
+                      </View>
+
+                      <TouchableOpacity
+                        style={[styles.primaryButton, { backgroundColor: '#2E7D32' }]}
+                        onPress={handlePayClick}
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Text style={styles.primaryButtonText}>Đăng ký ngay</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              )}
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       )}
@@ -571,6 +577,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   primaryButton: {
+    width: '100%',
     height: 50,
     backgroundColor: '#0544B3',
     borderRadius: 10,
@@ -625,6 +632,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   successContainer: {
+    width: '100%',
     alignItems: 'center',
     paddingVertical: 16,
   },

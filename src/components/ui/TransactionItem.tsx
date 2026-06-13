@@ -32,16 +32,14 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
 
   return (
     <TouchableOpacity style={styles.container} activeOpacity={0.7}>
-      <View style={styles.leftContent}>
-        <View style={[styles.iconContainer, { backgroundColor: iconBgColor }]}>
-          <Ionicons name={icon} size={20} color={iconColor} />
-        </View>
-        <View style={styles.textContainer}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
-        </View>
+      <View style={[styles.iconContainer, { backgroundColor: iconBgColor }]}>
+        <Ionicons name={icon} size={20} color={iconColor} />
       </View>
-      <Text style={[styles.amount, { color: amountColor }]}>{formattedAmount}</Text>
+      <View style={styles.textContainer}>
+        <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
+        <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">{subtitle}</Text>
+      </View>
+      <Text style={[styles.amount, { color: amountColor }]} numberOfLines={1}>{formattedAmount}</Text>
     </TouchableOpacity>
   );
 };
@@ -50,12 +48,8 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingVertical: 12,
-  },
-  leftContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    width: '100%',
   },
   iconContainer: {
     width: 48,
@@ -63,10 +57,12 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
   textContainer: {
     justifyContent: 'center',
+    flex: 1,
+    marginRight: 12,
   },
   title: {
     fontSize: 16,
@@ -81,5 +77,6 @@ const styles = StyleSheet.create({
   amount: {
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'right',
   },
 });

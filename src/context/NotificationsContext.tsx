@@ -256,8 +256,7 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
 
       Object.values(activeSubs).forEach((sub) => {
         const expiresAt = new Date(sub.expiresAt);
-        const timeDiff = expiresAt.getTime() - new Date().getTime();
-        const daysRemaining = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+        const daysRemaining = calculateRemainingDays(sub.expiresAt);
 
         if (sub.autoRenew !== false && daysRemaining > 0 && daysRemaining <= 7) {
           const formattedExpiry = expiresAt.toLocaleDateString('vi-VN');

@@ -67,18 +67,12 @@ export function useServicesLogic() {
       let subs: Record<string, any> = {};
 
       try {
-        // First clean up expired subscriptions in DB
-        await supabase
-          .from('subscriptions')
-          .delete()
-          .eq('user_id', user.id)
-          .lt('expires_at', new Date().toISOString());
-
-        // Fetch remaining active subscriptions
+        // Fetch active subscriptions (where expires_at is in the future)
         const { data, error } = await supabase
           .from('subscriptions')
           .select('*')
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .gt('expires_at', new Date().toISOString());
 
         if (!error && data) {
           data.forEach((sub: any) => {
@@ -271,20 +265,20 @@ export function useServicesLogic() {
           await safeStorage.setItem(subKey, JSON.stringify(currentSubs));
           setActiveSubscriptions(currentSubs);
 
-          try {
-            await supabase
-              .from('subscriptions')
-              .upsert({
-                user_id: user.id,
-                service_id: selectedService,
-                cycle: subscriptionCycle,
-                price: amount,
-                registered_at: registeredAt.toISOString(),
-                expires_at: expiresAt.toISOString(),
-                auto_renew: true
-              }, { onConflict: 'user_id,service_id' });
-          } catch (dbErr) {
-            console.warn("DB insert/update skipped or subscriptions table not ready:", dbErr);
+          const { error: dbErr } = await supabase
+            .from('subscriptions')
+            .upsert({
+              user_id: user.id,
+              service_id: selectedService,
+              cycle: subscriptionCycle,
+              price: amount,
+              registered_at: registeredAt.toISOString(),
+              expires_at: expiresAt.toISOString(),
+              auto_renew: true
+            }, { onConflict: 'user_id,service_id' });
+
+          if (dbErr) {
+            console.warn("DB insert/update failed:", dbErr.message);
           }
         }
       }
@@ -330,14 +324,14 @@ export function useServicesLogic() {
       await safeStorage.setItem(subKey, JSON.stringify(currentSubs));
       setActiveSubscriptions(currentSubs);
 
-      try {
-        await supabase
-          .from('subscriptions')
-          .update({ auto_renew: false })
-          .eq('user_id', user.id)
-          .eq('service_id', serviceId);
-      } catch (dbErr) {
-        console.warn("DB update skipped or subscriptions table not ready:", dbErr);
+      const { error: dbErr } = await supabase
+        .from('subscriptions')
+        .update({ auto_renew: false })
+        .eq('user_id', user.id)
+        .eq('service_id', serviceId);
+
+      if (dbErr) {
+        console.warn("DB update failed:", dbErr.message);
       }
 
       setIsSuccess(true);

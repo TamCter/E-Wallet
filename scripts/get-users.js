@@ -8,8 +8,8 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 async function main() {
   console.log('Logging in as admin...');
   const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
-    email: 'admin@gmail.com',
-    password: '071020041'
+    email: process.env.SUPABASE_ADMIN_EMAIL || 'admin@gmail.com',
+    password: process.env.SUPABASE_ADMIN_PASSWORD
   });
 
   if (signInError) {

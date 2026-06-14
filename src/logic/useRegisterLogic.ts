@@ -89,6 +89,7 @@ export function useRegisterLogic() {
           params: {
             phone: cleanPhone,
             phoneCountryCode: cleanCountryCode,
+            email: email.trim(),
             flow: 'register'
           }
         });

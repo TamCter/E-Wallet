@@ -21,7 +21,7 @@ export function useEditProfileLogic() {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        console.error('Error fetching Auth user:', authError);
+        console.warn('Error fetching Auth user:', authError);
         router.replace('/login');
         return;
       }

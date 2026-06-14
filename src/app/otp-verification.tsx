@@ -5,20 +5,22 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { backendApi } from '@/lib/backendApi';
+import { supabase } from '@/lib/supabase';
 
 const OTP_LENGTH = 6;
 
 export default function OTPVerificationScreen() {
   const router = useRouter();
-  const { phone, phoneCountryCode, flow } = useLocalSearchParams<{
+  const { phone, phoneCountryCode, email, flow } = useLocalSearchParams<{
     phone?: string;
     phoneCountryCode?: string;
+    email?: string;
     flow?: string;
   }>();
 
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [loading, setLoading] = useState(false);
-  const [countdown, setCountdown] = useState(7); // "00:07" as per design
+  const [countdown, setCountdown] = useState(60); // Standard 60s countdown
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   useEffect(() => {
@@ -31,14 +33,16 @@ export default function OTPVerificationScreen() {
     };
   }, [countdown]);
 
-  // Fail closed if phone is missing
-  if (!phone) {
+  const isEmailFlow = flow === 'register';
+
+  // Fail closed if required contact info is missing based on flow
+  if (isEmailFlow ? !email : !phone) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={[styles.content, { justifyContent: 'center', padding: 24 }]}>
           <Ionicons name="alert-circle-outline" size={48} color="#D32F2F" style={{ marginBottom: 16 }} />
           <Text style={{ color: '#D32F2F', fontSize: 16, fontWeight: 'bold', textAlign: 'center', marginBottom: 24 }}>
-            Không tìm thấy thông tin số điện thoại xác thực.
+            Không tìm thấy thông tin {isEmailFlow ? 'email' : 'số điện thoại'} xác thực.
           </Text>
           <Button
             title="Quay lại"
@@ -71,7 +75,7 @@ export default function OTPVerificationScreen() {
   const getMaskedPhone = () => {
     const cc = phoneCountryCode || '+84';
 
-    const cleanNum = phone.replace(/\D/g, '');
+    const cleanNum = phone!.replace(/\D/g, '');
     let finalNum = cleanNum;
     if (finalNum.startsWith('0')) {
       finalNum = finalNum.substring(1);
@@ -90,34 +94,87 @@ export default function OTPVerificationScreen() {
     return `${cc} ${start}${part1} ${part2} ${end}`;
   };
 
+  const getMaskedEmail = (emailStr: string) => {
+    const parts = emailStr.split('@');
+    if (parts.length !== 2) return emailStr;
+    const [local, domain] = parts;
+    if (local.length <= 2) {
+      return `${local[0] || ''}***@${domain}`;
+    }
+    const start = local.substring(0, 1);
+    const end = local.substring(local.length - 1);
+    const stars = '*'.repeat(Math.min(5, local.length - 2));
+    return `${start}${stars}${end}@${domain}`;
+  };
+
   const handleVerify = () => {
     const otpString = otp.join('');
     if (otpString.length === OTP_LENGTH) {
       setLoading(true);
-      // Simulate API call
-      setTimeout(async () => {
-        if (flow === 'register') {
+      if (flow === 'register') {
+        supabase.auth.verifyOtp({
+          email: email!,
+          token: otpString,
+          type: 'signup'
+        })
+        .then(({ data, error }) => {
           setLoading(false);
-          Alert.alert(
-            'Thành công',
-            'Đăng ký tài khoản thành công! Bạn có thể tiến hành đăng nhập.',
-            [{ text: 'OK', onPress: () => router.replace('/login') }]
-          );
-        } else {
+          if (error) {
+            Alert.alert('Xác thực thất bại', error.message);
+          } else {
+            Alert.alert(
+              'Thành công',
+              'Đăng ký tài khoản và xác thực email thành công! Bạn có thể tiến hành đăng nhập.',
+              [{ text: 'OK', onPress: () => router.replace('/login') }]
+            );
+          }
+        })
+        .catch(() => {
+          setLoading(false);
+          Alert.alert('Lỗi', 'Có lỗi xảy ra khi xác thực OTP.');
+        });
+      } else {
+        // Simulate API call for forgot password/phone flow
+        setTimeout(async () => {
           try {
             // Call backend API endpoint to issue a signed token
-            const token = await backendApi.issueVerificationToken(phone);
+            const token = await backendApi.issueVerificationToken(phone!);
             setLoading(false);
             router.replace({
               pathname: '/reset-password',
               params: { token }
             });
-          } catch (e) {
+          } catch {
             setLoading(false);
             Alert.alert('Lỗi', 'Có lỗi xảy ra khi xác thực OTP.');
           }
+        }, 1500);
+      }
+    }
+  };
+
+  const handleResend = async () => {
+    if (isEmailFlow) {
+      setLoading(true);
+      try {
+        const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email: email!
+        });
+        setLoading(false);
+        if (error) {
+          Alert.alert('Lỗi', error.message);
+        } else {
+          Alert.alert('Thành công', 'Mã xác thực mới đã được gửi đến email của bạn.');
+          setCountdown(60);
         }
-      }, 1500);
+      } catch {
+        setLoading(false);
+        Alert.alert('Lỗi', 'Không thể kết nối đến máy chủ.');
+      }
+    } else {
+      Alert.alert('Thành công', 'Mã xác thực mới đã được gửi.');
+      setCountdown(60);
     }
   };
 
@@ -137,8 +194,12 @@ export default function OTPVerificationScreen() {
           <View style={styles.content}>
             <Text style={styles.title}>Xác thực OTP</Text>
             <Text style={styles.description}>
-              Mã xác thực đã được gửi đến số điện thoại của bạn{'\n'}
-              <Text style={styles.phoneNumber}>{getMaskedPhone()}</Text>
+              {isEmailFlow 
+                ? 'Mã xác thực đã được gửi đến địa chỉ email của bạn\n'
+                : 'Mã xác thực đã được gửi đến số điện thoại của bạn\n'}
+              <Text style={styles.phoneNumber}>
+                {isEmailFlow ? getMaskedEmail(email || '') : getMaskedPhone()}
+              </Text>
             </Text>
 
             <View style={styles.otpContainer}>
@@ -157,12 +218,18 @@ export default function OTPVerificationScreen() {
               ))}
             </View>
 
-            <View style={styles.resendContainer}>
-              <Text style={styles.resendText}>Gửi lại mã sau </Text>
-              <Text style={styles.countdownText}>
-                00:{countdown < 10 ? `0${countdown}` : countdown}
-              </Text>
-            </View>
+            {countdown > 0 ? (
+              <View style={styles.resendContainer}>
+                <Text style={styles.resendText}>Gửi lại mã sau </Text>
+                <Text style={styles.countdownText}>
+                  00:{countdown < 10 ? `0${countdown}` : countdown}
+                </Text>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={handleResend} style={styles.resendContainer}>
+                <Text style={styles.resendLink}>Gửi lại mã</Text>
+              </TouchableOpacity>
+            )}
 
             <View style={styles.bottomSection}>
                <Button
@@ -254,6 +321,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0544B3',
     fontWeight: 'bold',
+  },
+  resendLink: {
+    fontSize: 14,
+    color: '#0544B3',
+    fontWeight: 'bold',
+    textDecorationLine: 'underline',
   },
   bottomSection: {
     width: '100%',

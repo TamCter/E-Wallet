@@ -18,7 +18,7 @@ export function useProfileLogic() {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        console.error('Lỗi lấy thông tin Auth hoặc chưa đăng nhập:', authError);
+        console.warn('Lỗi lấy thông tin Auth hoặc chưa đăng nhập:', authError);
         router.replace('/login');
         return;
       }

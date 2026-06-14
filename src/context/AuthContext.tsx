@@ -6,18 +6,51 @@ type AuthContextType = {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  hasPin: boolean | null;
+  refreshHasPin: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   loading: true,
+  hasPin: null,
+  refreshHasPin: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasPin, setHasPin] = useState<boolean | null>(null);
+
+  const checkPinStatus = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('payment_pin')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Error fetching payment_pin, database column may not exist yet:', error.message);
+        setHasPin(true); // Fallback to avoid blocking users
+        return;
+      }
+
+      setHasPin(!!data?.payment_pin);
+    } catch (err) {
+      console.warn('Exception fetching payment_pin:', err);
+      setHasPin(true);
+    }
+  };
+
+  const refreshHasPin = async () => {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (currentUser) {
+      await checkPinStatus(currentUser.id);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession()
@@ -30,9 +63,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           });
           setSession(null);
           setUser(null);
+          setHasPin(null);
         } else {
           setSession(session);
           setUser(session?.user ?? null);
+          if (session?.user) {
+            checkPinStatus(session.user.id);
+          } else {
+            setHasPin(true);
+          }
         }
       })
       .catch((err) => {
@@ -43,6 +82,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
         setSession(null);
         setUser(null);
+        setHasPin(null);
       })
       .finally(() => {
         setLoading(false);
@@ -51,6 +91,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        checkPinStatus(session.user.id);
+      } else {
+        setHasPin(true);
+      }
       setLoading(false);
     });
 
@@ -60,7 +105,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user, loading }}>
+    <AuthContext.Provider value={{ session, user, loading, hasPin, refreshHasPin }}>
       {children}
     </AuthContext.Provider>
   );

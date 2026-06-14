@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useServicesLogic, ServiceType } from '@/logic/useServicesLogic';
 import { formatCurrency, calculateRemainingDays } from '@/utils/math';
+import { PinCodeModal } from '@/components/PinCodeModal';
 
 export default function ServicesScreen() {
   const router = useRouter();
@@ -38,6 +39,11 @@ export default function ServicesScreen() {
     handlePay,
     handleCancelSubscription,
     resetStates,
+    isPinModalVisible,
+    setIsPinModalVisible,
+    pinError,
+    setPinError,
+    handleVerifyPinAndPay,
   } = useServicesLogic();
 
   const currentSub = selectedService ? activeSubscriptions[selectedService] : undefined;
@@ -551,6 +557,15 @@ export default function ServicesScreen() {
           </View>
         </KeyboardAvoidingView>
       )}
+
+      <PinCodeModal
+        isVisible={isPinModalVisible}
+        onClose={() => setIsPinModalVisible(false)}
+        onSuccess={handleVerifyPinAndPay}
+        loading={isProcessing}
+        errorText={pinError}
+        setErrorText={setPinError}
+      />
     </SafeAreaView>
   );
 }

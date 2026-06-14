@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Dropdown } from 'react-native-element-dropdown';
 import { COUNTRY_CODES } from '@/constants/countryCodes';
 import { useTransferLogic } from '@/logic/useTransferLogic';
+import { PinCodeModal } from '@/components/PinCodeModal';
 
 export default function TransferScreen() {
   const {
@@ -21,7 +22,6 @@ export default function TransferScreen() {
     phone,
     setPhone,
     recipientName,
-    setRecipientName,
     isLookingUp,
     amount,
     setAmount,
@@ -37,6 +37,11 @@ export default function TransferScreen() {
     handleConfirm,
     handleTransfer,
     handleReset,
+    isPinModalVisible,
+    setIsPinModalVisible,
+    pinError,
+    setPinError,
+    handleVerifyPinAndTransfer,
   } = useTransferLogic();
 
   const formatCurrency = (val: string | number) => {
@@ -366,6 +371,15 @@ const renderHeader = () => (
       {step === 'input' && renderInputStep()}
       {step === 'amount' && renderAmountStep()}
       {step === 'review' && renderReviewStep()}
+
+      <PinCodeModal
+        isVisible={isPinModalVisible}
+        onClose={() => setIsPinModalVisible(false)}
+        onSuccess={handleVerifyPinAndTransfer}
+        loading={isTransferring}
+        errorText={pinError}
+        setErrorText={setPinError}
+      />
     </SafeAreaView>
   );
 }

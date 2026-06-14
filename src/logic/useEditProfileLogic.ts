@@ -83,7 +83,7 @@ export function useEditProfileLogic() {
         updateData.email = currentEmail.trim();
       }
 
-      const { data: authData, error: authError } = await supabase.auth.updateUser(updateData);
+      const { error: authError } = await supabase.auth.updateUser(updateData);
 
       if (authError) {
         Alert.alert('Lỗi cập nhật Auth', authError.message);

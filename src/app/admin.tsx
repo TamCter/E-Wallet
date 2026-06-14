@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,7 +24,6 @@ export default function AdminScreen() {
   const [users, setUsers] = useState<UserWithWallet[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Modal edit balance states
@@ -113,7 +112,7 @@ export default function AdminScreen() {
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
-  }, [session, authLoading, fetchData]);
+  }, [session, authLoading, fetchData, router]);
 
   const handleOpenEditBalance = (user: UserWithWallet) => {
     setSelectedUser(user);
@@ -168,7 +167,7 @@ export default function AdminScreen() {
     try {
       await supabase.auth.signOut();
       router.replace('/login');
-    } catch (e) {
+    } catch {
       router.replace('/login');
     }
   };

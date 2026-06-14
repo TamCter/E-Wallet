@@ -10,8 +10,8 @@ import { useForgotPasswordLogic } from '@/logic/useForgotPasswordLogic';
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const {
-    phone,
-    setPhone,
+    email,
+    setEmail,
     loading,
     handleContinue,
   } = useForgotPasswordLogic();
@@ -32,17 +32,18 @@ export default function ForgotPasswordScreen() {
           <View style={styles.content}>
             <Text style={styles.title}>Quên mật khẩu</Text>
             <Text style={styles.description}>
-              Vui lòng nhập số điện thoại đã đăng ký để nhận mã xác thực (OTP) khôi phục mật khẩu.
+              Vui lòng nhập địa chỉ email đã đăng ký để nhận mã xác thực (OTP) khôi phục mật khẩu.
             </Text>
 
             <View style={styles.form}>
               <AuthInput
-                label="Số điện thoại"
-                icon="phone-portrait-outline"
-                placeholder="Nhập số điện thoại"
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={setPhone}
+                label="Địa chỉ Email"
+                icon="mail-outline"
+                placeholder="Nhập địa chỉ email của bạn"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
               />
 
               <Button

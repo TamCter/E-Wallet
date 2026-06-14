@@ -1,67 +1,50 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 export function useForgotPasswordLogic() {
   const router = useRouter();
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
+  const handleContinue = async () => {
+    const cleanEmail = email.trim().toLowerCase();
 
-  const handleContinue = () => {
-    let cc = '+84';
-    let cleanPhone = phone.trim();
-
-    if (cleanPhone.startsWith('+')) {
-      const match = cleanPhone.match(/^\+(\d{1,4})/);
-      if (match) {
-        cc = '+' + match[1];
-        cleanPhone = cleanPhone.substring(match[0].length);
-      }
-    }
-
-    cleanPhone = cleanPhone.replace(/\D/g, '');
-    if (cleanPhone.startsWith('0')) {
-      cleanPhone = cleanPhone.substring(1);
-    }
-
-    const phonePattern = /^\d{7,15}$/;
-    if (!cleanPhone || !phonePattern.test(cleanPhone)) {
-      Alert.alert('Lỗi', 'Số điện thoại không hợp lệ (yêu cầu từ 7 đến 15 chữ số)');
+    // Email validation regex
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanEmail || !emailPattern.test(cleanEmail)) {
+      Alert.alert('Lỗi', 'Địa chỉ email không hợp lệ');
       return;
     }
 
     setLoading(true);
 
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    timeoutRef.current = setTimeout(() => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
       setLoading(false);
-      router.push({
-        pathname: '/otp-verification',
-        params: {
-          phone: cleanPhone,
-          phoneCountryCode: cc,
-          flow: 'forgot-password'
-        }
-      });
-    }, 1500);
+
+      if (error) {
+        Alert.alert('Lỗi gửi yêu cầu', error.message);
+      } else {
+        router.push({
+          pathname: '/otp-verification',
+          params: {
+            email: cleanEmail,
+            flow: 'forgot-password'
+          }
+        });
+      }
+    } catch {
+      setLoading(false);
+      Alert.alert('Lỗi', 'Không thể kết nối đến máy chủ.');
+    }
   };
 
   return {
     router,
-    phone,
-    setPhone,
+    email,
+    setEmail,
     loading,
     handleContinue,
   };

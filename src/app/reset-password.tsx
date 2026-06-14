@@ -1,18 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { AuthInput } from '@/components/ui/AuthInput';
-import { backendApi } from '@/lib/backendApi';
+import { supabase } from '@/lib/supabase';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
-  const { token } = useLocalSearchParams<{ token?: string }>();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Check if a recovery session is active (verifyOtp type recovery logs the user in)
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert(
+          'Lỗi xác thực',
+          'Yêu cầu xác thực OTP trước khi đặt lại mật khẩu.',
+          [{ text: 'Quay lại', onPress: () => router.replace('/forgot-password') }]
+        );
+      }
+    };
+    checkSession();
+  }, [router]);
 
   // Simple validation logic
   const hasMinLength = password.length >= 8;
@@ -21,26 +35,28 @@ export default function ResetPasswordScreen() {
 
   const isFormValid = hasMinLength && hasUpperCase && hasNumber && password === confirmPassword && password !== '';
 
-  const handleUpdatePassword = () => {
+  const handleUpdatePassword = async () => {
     if (isFormValid) {
-      // Validate the token imperatively when the user submits using the simulated server-side check
-      const validation = backendApi.validateVerificationTokenSync(token || '', Date.now());
-      if (!validation.isValid) {
-        Alert.alert(
-          'Lỗi xác thực',
-          'Yêu cầu xác thực OTP trước khi đặt lại mật khẩu.',
-          [{ text: 'Quay lại', onPress: () => router.replace('/forgot-password') }]
-        );
-        return;
-      }
-
       setLoading(true);
-      // Simulate API call
-      setTimeout(() => {
+      try {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) {
+          setLoading(false);
+          Alert.alert('Lỗi cập nhật mật khẩu', error.message);
+        } else {
+          // Clear current session so they must log in with their new password
+          await supabase.auth.signOut();
+          setLoading(false);
+          Alert.alert(
+            'Thành công',
+            'Đặt lại mật khẩu mới thành công! Vui lòng đăng nhập bằng mật khẩu mới.',
+            [{ text: 'Đăng nhập', onPress: () => router.replace('/login') }]
+          );
+        }
+      } catch {
         setLoading(false);
-        // Usually you show a success message here, but we'll just go back to login
-        router.replace('/login');
-      }, 1500);
+        Alert.alert('Lỗi', 'Không thể kết nối đến máy chủ.');
+      }
     }
   };
 

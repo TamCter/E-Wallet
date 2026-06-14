@@ -33,7 +33,7 @@ export default function OTPVerificationScreen() {
     };
   }, [countdown]);
 
-  const isEmailFlow = flow === 'register';
+  const isEmailFlow = flow === 'register' || flow === 'forgot-password';
 
   // Fail closed if required contact info is missing based on flow
   if (isEmailFlow ? !email : !phone) {
@@ -117,7 +117,7 @@ export default function OTPVerificationScreen() {
           token: otpString,
           type: 'signup'
         })
-        .then(({ data, error }) => {
+        .then(({ error }) => {
           setLoading(false);
           if (error) {
             Alert.alert('Xác thực thất bại', error.message);
@@ -133,11 +133,28 @@ export default function OTPVerificationScreen() {
           setLoading(false);
           Alert.alert('Lỗi', 'Có lỗi xảy ra khi xác thực OTP.');
         });
+      } else if (flow === 'forgot-password') {
+        supabase.auth.verifyOtp({
+          email: email!,
+          token: otpString,
+          type: 'recovery'
+        })
+        .then(({ error }) => {
+          setLoading(false);
+          if (error) {
+            Alert.alert('Xác thực thất bại', error.message);
+          } else {
+            router.replace('/reset-password');
+          }
+        })
+        .catch(() => {
+          setLoading(false);
+          Alert.alert('Lỗi', 'Có lỗi xảy ra khi xác thực OTP.');
+        });
       } else {
-        // Simulate API call for forgot password/phone flow
+        // Fallback for mock phone flow
         setTimeout(async () => {
           try {
-            // Call backend API endpoint to issue a signed token
             const token = await backendApi.issueVerificationToken(phone!);
             setLoading(false);
             router.replace({
@@ -157,10 +174,18 @@ export default function OTPVerificationScreen() {
     if (isEmailFlow) {
       setLoading(true);
       try {
-        const { error } = await supabase.auth.resend({
-          type: 'signup',
-          email: email!
-        });
+        let error;
+        if (flow === 'register') {
+          const res = await supabase.auth.resend({
+            type: 'signup',
+            email: email!
+          });
+          error = res.error;
+        } else {
+          const res = await supabase.auth.resetPasswordForEmail(email!);
+          error = res.error;
+        }
+        
         setLoading(false);
         if (error) {
           Alert.alert('Lỗi', error.message);

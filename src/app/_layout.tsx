@@ -35,7 +35,7 @@ function RootLayoutNav() {
     // Nếu đã đăng nhập
     else if (session) {
       // Bắt buộc tạo PIN nếu người dùng thường chưa cài đặt PIN
-      if (!isAdmin && hasPin === false) {
+      if (!isAdmin && hasPin === false && !isPublic) {
         if (!isSetupPinScreen) {
           router.replace('/setup-pin');
         }
@@ -58,7 +58,7 @@ function RootLayoutNav() {
         }
       }
     }
-  }, [session, loading, hasPin, segments, router, navigationState?.key]);
+  }, [session, loading, hasPin, segments[0], router, navigationState?.key]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

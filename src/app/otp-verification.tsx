@@ -117,11 +117,14 @@ export default function OTPVerificationScreen() {
           token: otpString,
           type: 'signup'
         })
-        .then(({ error }) => {
-          setLoading(false);
+        .then(async ({ error }) => {
           if (error) {
+            setLoading(false);
             Alert.alert('Xác thực thất bại', error.message);
           } else {
+            // Sign out to clear the auto-logged-in session from verifyOtp
+            await supabase.auth.signOut().catch(() => {});
+            setLoading(false);
             Alert.alert(
               'Thành công',
               'Đăng ký tài khoản và xác thực email thành công! Bạn có thể tiến hành đăng nhập.',

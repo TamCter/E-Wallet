@@ -62,7 +62,14 @@ export default function SetupPinScreen() {
   };
 
   const savePin = async (newPin: string) => {
-    if (!user) return;
+    if (!user) {
+      Alert.alert(
+        'Lỗi xác thực',
+        'Phiên đăng nhập không tồn tại hoặc đã hết hạn. Vui lòng đăng nhập lại.',
+        [{ text: 'Đăng nhập', onPress: () => router.replace('/login') }]
+      );
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase

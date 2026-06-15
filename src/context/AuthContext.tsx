@@ -67,8 +67,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(null);
           setHasPin(null);
         } else {
+          setSession(session);
+          setUser(session?.user ?? null);
           if (session?.user) {
-            // Save email of restored session on cold start, then force sign out
+            // Save email of restored session on cold start
             const email = session.user.email;
             if (email) {
               if (Platform.OS === 'web') {
@@ -77,20 +79,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 SecureStore.setItemAsync('lastEmail', email).catch(() => {});
               }
             }
-            supabase.auth.signOut().catch((err) => {
-              console.warn('Failed to sign out on session restoration:', err);
-            });
-            setSession(null);
-            setUser(null);
-            setHasPin(null);
+            checkPinStatus(session.user.id);
           } else {
-            setSession(session);
-            setUser(session?.user ?? null);
-            if (session?.user) {
-              checkPinStatus(session.user.id);
-            } else {
-              setHasPin(true);
-            }
+            setHasPin(true);
           }
         }
       })
@@ -118,10 +109,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             SecureStore.setItemAsync('lastEmail', email).catch(() => {});
           }
         }
-        supabase.auth.signOut().catch((err) => {
-          console.warn('Failed to sign out on initial session event:', err);
-        });
-        return;
       }
 
       setSession(session);

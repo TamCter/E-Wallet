@@ -316,20 +316,18 @@ export function useServicesLogic() {
         return false;
       }
 
-      // Fetch stored PIN
-      const { data: userData, error: fetchError } = await supabase
-        .from('users')
-        .select('payment_pin')
-        .eq('id', user.id)
-        .maybeSingle();
+      // Verify PIN via server-side RPC function
+      const { data: isValid, error: rpcError } = await supabase.rpc('verify_payment_pin', {
+        pin_input: pinInput,
+      });
 
-      if (fetchError || !userData?.payment_pin) {
+      if (rpcError) {
         setError('Không thể xác thực mã PIN của bạn lúc này.');
         setIsProcessing(false);
         return false;
       }
 
-      if (userData.payment_pin !== pinInput) {
+      if (!isValid) {
         setPinError('Mã PIN giao dịch không chính xác.');
         setIsProcessing(false);
         return false;

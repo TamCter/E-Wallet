@@ -14,7 +14,7 @@ export default function ProfileScreen() {
   useFocusEffect(
     React.useCallback(() => {
       fetchProfileAndWallet();
-    }, [])
+    }, [fetchProfileAndWallet])
   );
 
   // Định dạng số tiền thành chuỗi hiển thị tiền tệ Việt Nam (Ví dụ: 12,500,000)

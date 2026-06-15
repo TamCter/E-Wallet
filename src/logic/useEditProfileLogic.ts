@@ -21,7 +21,7 @@ export function useEditProfileLogic() {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        console.error('Error fetching Auth user:', authError);
+        console.warn('Error fetching Auth user:', authError);
         router.replace('/login');
         return;
       }
@@ -83,7 +83,7 @@ export function useEditProfileLogic() {
         updateData.email = currentEmail.trim();
       }
 
-      const { data: authData, error: authError } = await supabase.auth.updateUser(updateData);
+      const { error: authError } = await supabase.auth.updateUser(updateData);
 
       if (authError) {
         Alert.alert('Lỗi cập nhật Auth', authError.message);

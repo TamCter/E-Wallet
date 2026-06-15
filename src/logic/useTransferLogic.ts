@@ -208,7 +208,10 @@ export function useTransferLogic() {
     setStep('review');
   };
 
-  const handleTransfer = async () => {
+  const [isPinModalVisible, setIsPinModalVisible] = useState(false);
+  const [pinError, setPinError] = useState('');
+
+  const executeTransfer = async () => {
     const numAmount = parseInt(amount.replace(/\./g, ''), 10);
     setIsTransferring(true);
 
@@ -243,6 +246,49 @@ export function useTransferLogic() {
     } finally {
       setIsTransferring(false);
     }
+  };
+
+  const handleVerifyPinAndTransfer = async (pinInput: string): Promise<boolean> => {
+    setIsTransferring(true);
+    setPinError('');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert('Lỗi', 'Không tìm thấy thông tin người dùng');
+        setIsTransferring(false);
+        return false;
+      }
+
+      // Verify PIN via server-side RPC function
+      const { data: isValid, error: rpcError } = await supabase.rpc('verify_payment_pin', {
+        pin_input: pinInput,
+      });
+
+      if (rpcError) {
+        Alert.alert('Lỗi', 'Không thể xác thực mã PIN của bạn lúc này.');
+        setIsTransferring(false);
+        return false;
+      }
+
+      if (!isValid) {
+        setPinError('Mã PIN giao dịch không chính xác.');
+        setIsTransferring(false);
+        return false;
+      }
+
+      // PIN is correct! Close modal and call transfer
+      setIsPinModalVisible(false);
+      await executeTransfer();
+      return true;
+    } catch (err: any) {
+      Alert.alert('Lỗi', err?.message || 'Không thể kết nối đến máy chủ.');
+      setIsTransferring(false);
+      return false;
+    }
+  };
+
+  const handleTransfer = () => {
+    setIsPinModalVisible(true);
   };
 
   const handleReset = () => {
@@ -283,5 +329,10 @@ export function useTransferLogic() {
     handleConfirm,
     handleTransfer,
     handleReset,
+    isPinModalVisible,
+    setIsPinModalVisible,
+    pinError,
+    setPinError,
+    handleVerifyPinAndTransfer,
   };
 }

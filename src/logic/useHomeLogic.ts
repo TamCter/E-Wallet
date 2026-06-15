@@ -35,7 +35,7 @@ export function useHomeLogic() {
       // 1. Get current auth user
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
-        console.error('Auth error in home logic:', authError);
+        console.warn('Auth error in home logic:', authError);
         setIsLoading(false);
         return;
       }

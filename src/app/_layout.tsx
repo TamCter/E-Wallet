@@ -10,13 +10,13 @@ import { NotificationsProvider } from '@/context/NotificationsContext';
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { session, loading } = useAuth();
+  const { session, loading, hasPin } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
 
   useEffect(() => {
-    if (!navigationState?.key || loading) return;
+    if (!navigationState?.key || loading || hasPin === null) return;
 
     const guestOnlyScreens = ['login', 'register', 'onboarding', 'index'];
     const publicScreens = ['reset-password', 'otp-verification', 'forgot-password'];
@@ -26,6 +26,7 @@ function RootLayoutNav() {
 
     const isAdmin = session?.user?.email?.toLowerCase() === 'admin@gmail.com';
     const isAdminScreen = segments[0] === 'admin';
+    const isSetupPinScreen = segments[0] === 'setup-pin';
 
     // Nếu chưa đăng nhập và cố truy cập màn hình cần bảo vệ (không phải guest-only và không phải public)
     if (!session && !isGuestOnly && !isPublic) {
@@ -33,17 +34,31 @@ function RootLayoutNav() {
     }
     // Nếu đã đăng nhập
     else if (session) {
-      if (isAdminScreen && !isAdmin) {
-        router.replace('/(tabs)');
-      } else if (isGuestOnly) {
-        if (isAdmin) {
-          router.replace('/admin');
-        } else {
+      // Bắt buộc tạo PIN nếu người dùng thường chưa cài đặt PIN
+      if (!isAdmin && hasPin === false && !isPublic) {
+        if (!isSetupPinScreen) {
+          router.replace('/setup-pin');
+        }
+      } else {
+        // Nếu đã có PIN hoặc là admin
+        if (isSetupPinScreen) {
+          if (isAdmin) {
+            router.replace('/admin');
+          } else {
+            router.replace('/(tabs)');
+          }
+        } else if (isAdminScreen && !isAdmin) {
           router.replace('/(tabs)');
+        } else if (isGuestOnly) {
+          if (isAdmin) {
+            router.replace('/admin');
+          } else {
+            router.replace('/(tabs)');
+          }
         }
       }
     }
-  }, [session, loading, segments, router, navigationState?.key]);
+  }, [session, loading, hasPin, segments[0], router, navigationState?.key]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -56,6 +71,7 @@ function RootLayoutNav() {
         <Stack.Screen name="forgot-password" />
         <Stack.Screen name="otp-verification" />
         <Stack.Screen name="reset-password" />
+        <Stack.Screen name="setup-pin" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="transfer" />
         <Stack.Screen name="edit-profile" />

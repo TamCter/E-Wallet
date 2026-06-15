@@ -69,7 +69,7 @@ export function useRegisterLogic() {
 
     try {
       // Gọi API Supabase tạo tài khoản vào hệ thống Auth độc lập
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password: password,
         options: {
@@ -89,11 +89,12 @@ export function useRegisterLogic() {
           params: {
             phone: cleanPhone,
             phoneCountryCode: cleanCountryCode,
+            email: email.trim(),
             flow: 'register'
           }
         });
       }
-    } catch (err: any) {
+    } catch {
       Alert.alert('Lỗi hệ thống', 'Không thể kết nối đến máy chủ.');
     } finally {
       setLoading(false);

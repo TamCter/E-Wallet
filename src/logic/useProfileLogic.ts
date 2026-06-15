@@ -18,7 +18,7 @@ export function useProfileLogic() {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        console.error('Lỗi lấy thông tin Auth hoặc chưa đăng nhập:', authError);
+        console.warn('Lỗi lấy thông tin Auth hoặc chưa đăng nhập:', authError);
         router.replace('/login');
         return;
       }
@@ -65,6 +65,12 @@ export function useProfileLogic() {
       await supabase.auth.signOut();
       if (Platform.OS !== 'web') {
         await SecureStore.deleteItemAsync('supabase.auth.token');
+      }
+      // Clear lastEmail on explicit logout
+      if (Platform.OS === 'web') {
+        localStorage.removeItem('lastEmail');
+      } else {
+        await SecureStore.deleteItemAsync('lastEmail');
       }
       router.replace('/login');
     } catch (e) {

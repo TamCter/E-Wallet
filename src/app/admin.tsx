@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import * as SecureStore from 'expo-secure-store';
 
 interface UserWithWallet {
   id: string;
@@ -24,7 +25,6 @@ export default function AdminScreen() {
   const [users, setUsers] = useState<UserWithWallet[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Modal edit balance states
@@ -113,7 +113,7 @@ export default function AdminScreen() {
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
-  }, [session, authLoading, fetchData]);
+  }, [session, authLoading, fetchData, router]);
 
   const handleOpenEditBalance = (user: UserWithWallet) => {
     setSelectedUser(user);
@@ -167,8 +167,14 @@ export default function AdminScreen() {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
+      // Clear lastEmail on explicit logout
+      if (Platform.OS === 'web') {
+        localStorage.removeItem('lastEmail');
+      } else {
+        await SecureStore.deleteItemAsync('lastEmail').catch(() => {});
+      }
       router.replace('/login');
-    } catch (e) {
+    } catch {
       router.replace('/login');
     }
   };

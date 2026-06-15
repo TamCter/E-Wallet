@@ -181,12 +181,11 @@ export function useServicesLogic() {
     }
   };
 
-  const handlePay = async (amount: number, customTitle: string, customSubtitle: string) => {
-    if (balance < amount) {
-      setError('Số dư ví không đủ để thực hiện giao dịch này');
-      return;
-    }
+  const [isPinModalVisible, setIsPinModalVisible] = useState(false);
+  const [pinError, setPinError] = useState('');
+  const [pendingPaymentParams, setPendingPaymentParams] = useState<{ amount: number; title: string; subtitle: string } | null>(null);
 
+  const executePay = async (amount: number, customTitle: string, customSubtitle: string) => {
     setIsProcessing(true);
     setError(null);
 
@@ -300,6 +299,63 @@ export function useServicesLogic() {
     }
   };
 
+  const handleVerifyPinAndPay = async (pinInput: string): Promise<boolean> => {
+    setIsProcessing(true);
+    setPinError('');
+    if (!pendingPaymentParams) {
+      setError('Thiếu tham số giao dịch');
+      setIsProcessing(false);
+      return false;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError('Không tìm thấy thông tin người dùng');
+        setIsProcessing(false);
+        return false;
+      }
+
+      // Verify PIN via server-side RPC function
+      const { data: isValid, error: rpcError } = await supabase.rpc('verify_payment_pin', {
+        pin_input: pinInput,
+      });
+
+      if (rpcError) {
+        setError('Không thể xác thực mã PIN của bạn lúc này.');
+        setIsProcessing(false);
+        return false;
+      }
+
+      if (!isValid) {
+        setPinError('Mã PIN giao dịch không chính xác.');
+        setIsProcessing(false);
+        return false;
+      }
+
+      // PIN matches! Close modal and execute pay
+      setIsPinModalVisible(false);
+      const { amount, title, subtitle } = pendingPaymentParams;
+      setPendingPaymentParams(null);
+      await executePay(amount, title, subtitle);
+      return true;
+    } catch (err: any) {
+      setError(err?.message || 'Lỗi kết nối máy chủ.');
+      setIsProcessing(false);
+      return false;
+    }
+  };
+
+  const handlePay = async (amount: number, customTitle: string, customSubtitle: string) => {
+    if (balance < amount) {
+      setError('Số dư ví không đủ để thực hiện giao dịch này');
+      return;
+    }
+
+    setPendingPaymentParams({ amount, title: customTitle, subtitle: customSubtitle });
+    setIsPinModalVisible(true);
+  };
+
   const resetStates = () => {
     setSelectedService(null);
     setCustomerCode('');
@@ -309,6 +365,7 @@ export function useServicesLogic() {
     setError(null);
     setLastTransactionId(null);
     setSubscriptionCycle('monthly');
+    setPendingPaymentParams(null);
   };
 
   const handleCancelSubscription = async (serviceId: string) => {
@@ -368,5 +425,10 @@ export function useServicesLogic() {
     handlePay,
     handleCancelSubscription,
     resetStates,
+    isPinModalVisible,
+    setIsPinModalVisible,
+    pinError,
+    setPinError,
+    handleVerifyPinAndPay,
   };
 }

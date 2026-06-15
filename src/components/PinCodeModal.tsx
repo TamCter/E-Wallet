@@ -27,6 +27,7 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
   }, [isVisible, setErrorText]);
 
   const handleTextChange = async (text: string) => {
+    if (loading) return;
     const cleanText = text.replace(/[^0-9]/g, '');
     if (cleanText.length <= 6) {
       setPin(cleanText);

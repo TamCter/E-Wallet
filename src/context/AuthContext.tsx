@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [hasPin, setHasPin] = useState<boolean | null>(null);
 
-  const checkPinStatus = async (userId: string) => {
+  const checkPinStatus = async () => {
     try {
       const { data, error } = await supabase.rpc('has_payment_pin');
 
@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const refreshHasPin = async () => {
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (currentUser) {
-      await checkPinStatus(currentUser.id);
+      await checkPinStatus();
     }
   };
 
@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 SecureStore.setItemAsync('lastEmail', email).catch(() => {});
               }
             }
-            checkPinStatus(session.user.id);
+            checkPinStatus();
           } else {
             setHasPin(true);
           }
@@ -110,7 +110,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        checkPinStatus(session.user.id);
+        checkPinStatus();
       } else {
         setHasPin(true);
       }

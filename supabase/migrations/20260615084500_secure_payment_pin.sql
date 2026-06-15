@@ -1,9 +1,12 @@
 -- Enable pgcrypto extension if not already enabled
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- Create the trigger function to automatically hash plaintext payment_pin on insert/update
 CREATE OR REPLACE FUNCTION public.hash_payment_pin()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   IF NEW.payment_pin IS NOT NULL AND NEW.payment_pin NOT LIKE '$%' AND (TG_OP = 'INSERT' OR OLD.payment_pin IS NULL OR NEW.payment_pin <> OLD.payment_pin) THEN
     -- Hash the PIN using bcrypt from pgcrypto
@@ -11,7 +14,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Bind trigger to public.users table
 DROP TRIGGER IF EXISTS trigger_hash_payment_pin ON public.users;

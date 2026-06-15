@@ -19,19 +19,26 @@ export default function SetupPinScreen() {
   useEffect(() => {
     // Focus input on load and when switching steps
     const timer = setTimeout(() => inputRef.current?.focus(), 300);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+    };
   }, [step]);
 
   const handleTextChange = async (text: string) => {
+    if (loading) return;
     const cleanText = text.replace(/[^0-9]/g, '');
     if (cleanText.length <= 6) {
       if (step === 1) {
         setPin(cleanText);
         if (cleanText.length === 6) {
           // Go to step 2 after a small delay for smooth visual transition
-          setTimeout(() => {
+          const timeoutId = setTimeout(() => {
             setStep(2);
           }, 300);
+          transitionTimeoutRef.current = timeoutId;
         }
       } else {
         setConfirmPin(cleanText);
@@ -40,7 +47,7 @@ export default function SetupPinScreen() {
           if (pin === cleanText) {
             await savePin(pin);
           } else {
-            setTimeout(() => {
+            const timeoutId = setTimeout(() => {
               Alert.alert(
                 'Mã PIN không khớp',
                 'Mã PIN xác nhận không chính xác. Vui lòng thử lại.',
@@ -56,6 +63,7 @@ export default function SetupPinScreen() {
                 ]
               );
             }, 200);
+            transitionTimeoutRef.current = timeoutId;
           }
         }
       }
@@ -92,7 +100,7 @@ export default function SetupPinScreen() {
       }
     } catch (err: any) {
       setLoading(false);
-      Alert.alert('Lỗi', err.message || 'Không thể kết nối đến máy chủ.');
+      Alert.alert('Lỗi', err?.message || 'Không thể kết nối đến máy chủ.');
     }
   };
 

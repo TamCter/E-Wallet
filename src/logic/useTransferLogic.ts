@@ -281,7 +281,7 @@ export function useTransferLogic() {
       await executeTransfer();
       return true;
     } catch (err: any) {
-      Alert.alert('Lỗi', err.message || 'Không thể kết nối đến máy chủ.');
+      Alert.alert('Lỗi', err?.message || 'Không thể kết nối đến máy chủ.');
       setIsTransferring(false);
       return false;
     }

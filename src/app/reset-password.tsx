@@ -1,32 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { AuthInput } from '@/components/ui/AuthInput';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const { user: authUser, loading: authLoading } = useAuth();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Check if a recovery session is active (verifyOtp type recovery logs the user in)
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        Alert.alert(
-          'Lỗi xác thực',
-          'Yêu cầu xác thực OTP trước khi đặt lại mật khẩu.',
-          [{ text: 'Quay lại', onPress: () => router.replace('/forgot-password') }]
-        );
-      }
-    };
-    checkSession();
-  }, [router]);
+    if (!authLoading && !authUser) {
+      Alert.alert(
+        'Lỗi xác thực',
+        'Yêu cầu xác thực OTP trước khi đặt lại mật khẩu.',
+        [{ text: 'Quay lại', onPress: () => router.replace('/forgot-password') }]
+      );
+    }
+  }, [authLoading, authUser, router]);
+
+  if (authLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#0544B3" />
+      </SafeAreaView>
+    );
+  }
+
+  if (!authUser) {
+    return null;
+  }
 
   // Simple validation logic
   const hasMinLength = password.length >= 8;

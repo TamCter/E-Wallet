@@ -33,8 +33,12 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
       setPin(cleanText);
       setErrorText('');
       if (cleanText.length === 6) {
-        const success = await onSuccess(cleanText);
-        if (!success) {
+        try {
+          const success = await onSuccess(cleanText);
+          if (!success) {
+            setPin('');
+          }
+        } catch (err) {
           setPin('');
         }
       }
@@ -59,7 +63,11 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
       visible={isVisible}
       transparent
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={() => {
+        if (!loading) {
+          onClose();
+        }
+      }}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.modalOverlay}>

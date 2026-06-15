@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,9 +15,11 @@ export default function ResetPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const isIntentionalSignOutRef = useRef(false);
+
   // Check if a recovery session is active (verifyOtp type recovery logs the user in)
   useEffect(() => {
-    if (!authLoading && !authUser) {
+    if (!authLoading && !authUser && !isIntentionalSignOutRef.current) {
       Alert.alert(
         'Lỗi xác thực',
         'Yêu cầu xác thực OTP trước khi đặt lại mật khẩu.',
@@ -55,6 +57,7 @@ export default function ResetPasswordScreen() {
           Alert.alert('Lỗi cập nhật mật khẩu', error.message);
         } else {
           // Clear current session so they must log in with their new password
+          isIntentionalSignOutRef.current = true;
           await supabase.auth.signOut();
           setLoading(false);
           Alert.alert(

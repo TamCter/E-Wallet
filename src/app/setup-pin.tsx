@@ -14,6 +14,7 @@ export default function SetupPinScreen() {
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<TextInput>(null);
+  const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Focus input on load and when switching steps

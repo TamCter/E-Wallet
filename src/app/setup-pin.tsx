@@ -139,6 +139,7 @@ export default function SetupPinScreen() {
             onChangeText={handleTextChange}
             autoFocus
             secureTextEntry
+            editable={!loading}
           />
         </View>
       </TouchableWithoutFeedback>

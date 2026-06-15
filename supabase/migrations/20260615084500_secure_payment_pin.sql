@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE OR REPLACE FUNCTION public.hash_payment_pin()
 RETURNS TRIGGER AS $$
 BEGIN
-  IF NEW.payment_pin IS NOT NULL AND (TG_OP = 'INSERT' OR OLD.payment_pin IS NULL OR NEW.payment_pin <> OLD.payment_pin) THEN
+  IF NEW.payment_pin IS NOT NULL AND NEW.payment_pin NOT LIKE '$%' AND (TG_OP = 'INSERT' OR OLD.payment_pin IS NULL OR NEW.payment_pin <> OLD.payment_pin) THEN
     -- Hash the PIN using bcrypt from pgcrypto
     NEW.payment_pin := crypt(NEW.payment_pin, gen_salt('bf', 8));
   END IF;
@@ -43,5 +43,20 @@ BEGIN
   END IF;
 
   RETURN v_hashed_pin = crypt(pin_input, v_hashed_pin);
+END;
+$$;
+
+-- Create the has_payment_pin RPC function to securely check if a PIN is set
+CREATE OR REPLACE FUNCTION public.has_payment_pin()
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = auth.uid() AND payment_pin IS NOT NULL
+  );
 END;
 $$;

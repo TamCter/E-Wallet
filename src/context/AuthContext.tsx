@@ -28,21 +28,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const checkPinStatus = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('payment_pin')
-        .eq('id', userId)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('has_payment_pin');
 
       if (error) {
-        console.warn('Error fetching payment_pin, database column may not exist yet:', error.message);
+        console.warn('Error checking payment PIN status:', error.message);
         setHasPin(true); // Fallback to avoid blocking users
         return;
       }
 
-      setHasPin(!!data?.payment_pin);
+      setHasPin(!!data);
     } catch (err) {
-      console.warn('Exception fetching payment_pin:', err);
+      console.warn('Exception checking payment PIN status:', err);
       setHasPin(true);
     }
   };

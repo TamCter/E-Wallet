@@ -95,6 +95,7 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
               onChangeText={handleTextChange}
               secureTextEntry
               autoFocus
+              editable={!loading}
             />
           </View>
         </View>

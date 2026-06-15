@@ -166,11 +166,8 @@ export function useSecurityLogic() {
         if (user?.email) {
           try {
             const safeEmailKey = user.email.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
-            const hasBioPassword = await SecureStore.getItemAsync(`biometric_password_${safeEmailKey}`, {
-              requireAuthentication: true,
-              authenticationPrompt: 'Xác thực sinh trắc học để cập nhật thông tin đăng nhập',
-            });
-            if (hasBioPassword) {
+            const isBioEnabled = await SecureStore.getItemAsync(`biometric_login_enabled_${safeEmailKey}`);
+            if (isBioEnabled === 'true') {
               await SecureStore.setItemAsync(`biometric_password_${safeEmailKey}`, newPassword, {
                 requireAuthentication: true,
               });

@@ -19,10 +19,16 @@ CREATE TRIGGER trigger_hash_payment_pin
 BEFORE INSERT OR UPDATE ON public.users
 FOR EACH ROW EXECUTE FUNCTION public.hash_payment_pin();
 
+-- Disable the trigger before running the backfill update to prevent double-triggering
+ALTER TABLE public.users DISABLE TRIGGER trigger_hash_payment_pin;
+
 -- Hash existing plaintext payment_pins (non-null and not starting with '$')
 UPDATE public.users
 SET payment_pin = crypt(payment_pin, gen_salt('bf', 8))
 WHERE payment_pin IS NOT NULL AND payment_pin NOT LIKE '$%';
+
+-- Re-enable the trigger after the update is completed
+ALTER TABLE public.users ENABLE TRIGGER trigger_hash_payment_pin;
 
 -- Create the verify_payment_pin RPC function for server-side verification
 CREATE OR REPLACE FUNCTION public.verify_payment_pin(pin_input VARCHAR)

@@ -86,9 +86,15 @@ export function useLoginLogic() {
           localStorage.setItem('lastEmail', email);
         } else {
           await SecureStore.setItemAsync('lastEmail', email);
+          // Save password for biometric login with hardware-backed biometric protection (sanitize email for SecureStore key compatibility)
+          const safeEmailKey = email.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
+          await SecureStore.setItemAsync(`biometric_password_${safeEmailKey}`, password, {
+            requireAuthentication: true,
+          });
+          await SecureStore.setItemAsync(`biometric_login_enabled_${safeEmailKey}`, 'true');
         }
       } catch (storeErr) {
-        console.log('Could not persist lastEmail:', storeErr);
+        console.log('Could not persist lastEmail or password:', storeErr);
       }
 
       const isUserAdmin = authData.user?.email?.toLowerCase() === 'admin@gmail.com';
@@ -105,34 +111,74 @@ export function useLoginLogic() {
   };
 
   const handleBiometric = async () => {
+    if (Platform.OS === 'web') {
+      setErrorMessage('Đăng nhập bằng sinh trắc học không hỗ trợ trên nền tảng web.');
+      return;
+    }
+    setLoading(true);
+    setErrorMessage(null);
     try {
+      const savedEmail = await SecureStore.getItemAsync('lastEmail');
+      if (!savedEmail) {
+        setErrorMessage('Vui lòng đăng nhập bằng mật khẩu ít nhất một lần để kích hoạt sinh trắc học.');
+        setLoading(false);
+        return;
+      }
+
+      const safeEmailKey = savedEmail.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
       if (!hasHardware || !isEnrolled) {
         setErrorMessage('Thiết bị không hỗ trợ hoặc chưa đăng ký sinh trắc học.');
+        setLoading(false);
         return;
       }
 
-      const authResult = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Xác thực sinh trắc học để đăng nhập',
-        disableDeviceFallback: false,
+      let savedPassword = null;
+      try {
+        savedPassword = await SecureStore.getItemAsync(`biometric_password_${safeEmailKey}`, {
+          requireAuthentication: true,
+          authenticationPrompt: 'Xác thực sinh trắc học để đăng nhập',
+        });
+      } catch (err) {
+        setErrorMessage('Xác thực sinh trắc học không thành công.');
+        setLoading(false);
+        return;
+      }
+
+      if (!savedPassword) {
+        setErrorMessage('Không tìm thấy thông tin đăng nhập sinh trắc học. Vui lòng đăng nhập lại bằng mật khẩu.');
+        setLoading(false);
+        return;
+      }
+
+      // Log in with the saved credentials
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: savedEmail.trim(),
+        password: savedPassword,
       });
 
-      if (!authResult.success) {
-        setErrorMessage('Xác thực sinh trắc học không thành công.');
+      if (signInError) {
+        setErrorMessage('Thông tin đăng nhập sinh trắc học đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập bằng mật khẩu.');
+        // Clear invalid saved password
+        const safeEmailKey = savedEmail.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
+        await SecureStore.deleteItemAsync(`biometric_password_${safeEmailKey}`);
+        await SecureStore.deleteItemAsync(`biometric_login_enabled_${safeEmailKey}`);
+        setLoading(false);
         return;
       }
 
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        setErrorMessage('Không tìm thấy phiên đăng nhập hợp lệ. Vui lòng đăng nhập bằng mật khẩu.');
-        return;
+      const isUserAdmin = authData.user?.email?.toLowerCase() === 'admin@gmail.com';
+      if (isUserAdmin) {
+        router.replace('/admin');
+      } else {
+        router.replace('/(tabs)');
       }
-
-      router.replace('/(tabs)');
     } catch (err: any) {
       setErrorMessage(err?.message ?? 'Đã xảy ra lỗi trong quá trình xác thực.');
+    } finally {
+      setLoading(false);
     }
   };
 

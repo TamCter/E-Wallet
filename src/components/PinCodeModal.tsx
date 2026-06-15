@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, TouchableWithoutFeedback, ActivityIndicator, TouchableOpacity, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, Modal, TextInput, TouchableWithoutFeedback, ActivityIndicator, TouchableOpacity, Keyboard, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
+import { useAuth } from '@/context/AuthContext';
 
 interface PinCodeModalProps {
   isVisible: boolean;
@@ -12,8 +15,41 @@ interface PinCodeModalProps {
 }
 
 export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText, setErrorText }: PinCodeModalProps) {
+  const { user } = useAuth();
   const [pin, setPin] = useState('');
   const inputRef = useRef<TextInput>(null);
+  const [isBiometricAllowed, setIsBiometricAllowed] = useState(false);
+
+  const pinKey = user ? `saved_payment_pin_${user.id}` : 'saved_payment_pin';
+  const enabledKey = user ? `biometric_payment_enabled_${user.id}` : 'biometric_payment_enabled';
+
+  const handleBiometricsAuth = async () => {
+    if (loading) return;
+    try {
+      // Retrieve PIN securely, which automatically triggers the OS biometric prompt
+      const savedPin = await SecureStore.getItemAsync(pinKey, {
+        requireAuthentication: true,
+        authenticationPrompt: 'Xác thực sinh trắc học để giao dịch',
+      });
+
+      if (savedPin) {
+        setPin(savedPin);
+        try {
+          const success = await onSuccess(savedPin);
+          if (!success) {
+            setPin('');
+          }
+        } catch (err) {
+          setPin('');
+        }
+      } else {
+        setErrorText('Không tìm thấy mã PIN sinh trắc học hoặc xác thực thất bại.');
+      }
+    } catch (err) {
+      console.warn('Biometrics auth exception:', err);
+      setErrorText('Xác thực sinh trắc học không thành công.');
+    }
+  };
 
   useEffect(() => {
     if (isVisible) {
@@ -22,6 +58,34 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
         setErrorText('');
         inputRef.current?.focus();
       }, 300);
+
+      const checkBiometrics = async () => {
+        if (Platform.OS === 'web') {
+          setIsBiometricAllowed(false);
+          return;
+        }
+        try {
+          const hasHardware = await LocalAuthentication.hasHardwareAsync();
+          const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+          const enabled = await SecureStore.getItemAsync(enabledKey);
+          const hasSavedPin = await SecureStore.getItemAsync(pinKey);
+
+          const allowed = hasHardware && isEnrolled && enabled === 'true' && !!hasSavedPin;
+          setIsBiometricAllowed(allowed);
+
+          if (allowed) {
+            setTimeout(() => {
+              handleBiometricsAuth();
+            }, 450);
+          }
+        } catch (err) {
+          console.warn('checkBiometrics error in modal:', err);
+          setIsBiometricAllowed(false);
+        }
+      };
+
+      checkBiometrics();
+
       return () => clearTimeout(timer);
     }
   }, [isVisible, setErrorText]);
@@ -90,6 +154,18 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
             {errorText ? (
               <Text style={styles.errorText}>{errorText}</Text>
             ) : null}
+
+            {isBiometricAllowed && (
+              <TouchableOpacity 
+                style={styles.biometricButton} 
+                onPress={handleBiometricsAuth}
+                disabled={loading}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="finger-print" size={24} color="#0544B3" />
+                <Text style={styles.biometricButtonText}>Xác thực bằng vân tay / Face ID</Text>
+              </TouchableOpacity>
+            )}
 
             {loading ? (
               <ActivityIndicator size="large" color="#0544B3" style={styles.loader} />
@@ -198,5 +274,24 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: 8,
+  },
+  biometricButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 24,
+    backgroundColor: '#E6EDFF',
+    marginTop: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#D0E0FF',
+  },
+  biometricButtonText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0544B3',
   },
 });

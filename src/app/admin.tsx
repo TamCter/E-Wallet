@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import * as SecureStore from 'expo-secure-store';
 
 interface UserWithWallet {
   id: string;
@@ -166,6 +167,12 @@ export default function AdminScreen() {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
+      // Clear lastEmail on explicit logout
+      if (Platform.OS === 'web') {
+        localStorage.removeItem('lastEmail');
+      } else {
+        await SecureStore.deleteItemAsync('lastEmail').catch(() => {});
+      }
       router.replace('/login');
     } catch {
       router.replace('/login');

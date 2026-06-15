@@ -66,6 +66,12 @@ export function useProfileLogic() {
       if (Platform.OS !== 'web') {
         await SecureStore.deleteItemAsync('supabase.auth.token');
       }
+      // Clear lastEmail on explicit logout
+      if (Platform.OS === 'web') {
+        localStorage.removeItem('lastEmail');
+      } else {
+        await SecureStore.deleteItemAsync('lastEmail');
+      }
       router.replace('/login');
     } catch (e) {
       console.error('Logout error', e);

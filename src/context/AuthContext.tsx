@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
@@ -65,12 +67,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(null);
           setHasPin(null);
         } else {
-          setSession(session);
-          setUser(session?.user ?? null);
           if (session?.user) {
-            checkPinStatus(session.user.id);
+            // Save email of restored session on cold start, then force sign out
+            const email = session.user.email;
+            if (email) {
+              if (Platform.OS === 'web') {
+                localStorage.setItem('lastEmail', email);
+              } else {
+                SecureStore.setItemAsync('lastEmail', email).catch(() => {});
+              }
+            }
+            supabase.auth.signOut().catch((err) => {
+              console.warn('Failed to sign out on session restoration:', err);
+            });
+            setSession(null);
+            setUser(null);
+            setHasPin(null);
           } else {
-            setHasPin(true);
+            setSession(session);
+            setUser(session?.user ?? null);
+            if (session?.user) {
+              checkPinStatus(session.user.id);
+            } else {
+              setHasPin(true);
+            }
           }
         }
       })
@@ -88,7 +108,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setLoading(false);
       });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && event === 'INITIAL_SESSION') {
+        const email = session.user.email;
+        if (email) {
+          if (Platform.OS === 'web') {
+            localStorage.setItem('lastEmail', email);
+          } else {
+            SecureStore.setItemAsync('lastEmail', email).catch(() => {});
+          }
+        }
+        supabase.auth.signOut().catch((err) => {
+          console.warn('Failed to sign out on initial session event:', err);
+        });
+        return;
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {

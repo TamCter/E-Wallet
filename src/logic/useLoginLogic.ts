@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,25 @@ export function useLoginLogic() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadLastEmail = async () => {
+      try {
+        let savedEmail = '';
+        if (Platform.OS === 'web') {
+          savedEmail = localStorage.getItem('lastEmail') || '';
+        } else {
+          savedEmail = await SecureStore.getItemAsync('lastEmail') || '';
+        }
+        if (savedEmail) {
+          setEmail(savedEmail);
+        }
+      } catch (err) {
+        console.log('Error loading lastEmail:', err);
+      }
+    };
+    loadLastEmail();
+  }, []);
 
   const handleEmailChange = (val: string) => {
     setEmail(val);

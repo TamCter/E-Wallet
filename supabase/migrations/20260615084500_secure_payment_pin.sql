@@ -1,11 +1,14 @@
 -- Enable pgcrypto extension if not already enabled
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- Set search_path for the migration session to resolve pgcrypto functions
+SET search_path TO public, extensions;
+
 CREATE OR REPLACE FUNCTION public.hash_payment_pin()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 BEGIN
   IF NEW.payment_pin IS NOT NULL AND NEW.payment_pin NOT LIKE '$%' AND (TG_OP = 'INSERT' OR OLD.payment_pin IS NULL OR NEW.payment_pin <> OLD.payment_pin) THEN
@@ -38,7 +41,7 @@ CREATE OR REPLACE FUNCTION public.verify_payment_pin(pin_input VARCHAR)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_hashed_pin VARCHAR;
@@ -60,7 +63,7 @@ CREATE OR REPLACE FUNCTION public.has_payment_pin()
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 BEGIN
   RETURN EXISTS (

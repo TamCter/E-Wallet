@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthInput } from '@/components/ui/AuthInput';
 import { useSecurityLogic } from '@/logic/useSecurityLogic';
+import { PinCodeModal } from '@/components/PinCodeModal';
 
 export default function SecurityScreen() {
   const router = useRouter();
@@ -21,6 +22,15 @@ export default function SecurityScreen() {
     hasNumber,
     isFormValid,
     handleUpdatePassword,
+    isBiometricsSupported,
+    isBiometricsEnabled,
+    handleToggleBiometrics,
+    isPinModalVisible,
+    setIsPinModalVisible,
+    pinError,
+    setPinError,
+    pinModalLoading,
+    handleVerifyPinForBiometrics,
   } = useSecurityLogic();
 
   return (
@@ -39,21 +49,31 @@ export default function SecurityScreen() {
             <View style={{ width: 40 }} />
           </View>
 
-          {/* Biometrics Section (Disabled/Placeholder) */}
+          {/* Biometrics Section */}
           <Text style={styles.sectionTitle}>SINH TRẮC HỌC</Text>
           <View style={styles.biometricsCard}>
             <View style={styles.biometricsLeft}>
-              <View style={styles.biometricsIconBg}>
-                <Ionicons name="finger-print" size={24} color="#A0A0A0" />
+              <View style={[styles.biometricsIconBg, isBiometricsEnabled && styles.biometricsIconBgEnabled]}>
+                <Ionicons name="finger-print" size={24} color={isBiometricsEnabled ? "#0544B3" : "#A0A0A0"} />
               </View>
-              <View>
-                <Text style={styles.biometricsTitle}>Xác thực bằng vân tay</Text>
-                <Text style={styles.biometricsSubtitle}>Chưa kích hoạt / Đang phát triển</Text>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={[styles.biometricsTitle, isBiometricsEnabled && styles.biometricsTitleEnabled]}>
+                  Xác thực bằng vân tay / Face ID
+                </Text>
+                <Text style={styles.biometricsSubtitle}>
+                  {isBiometricsSupported 
+                    ? (isBiometricsEnabled ? 'Đã kích hoạt cho giao dịch' : 'Chưa kích hoạt')
+                    : 'Thiết bị không hỗ trợ sinh trắc học'}
+                </Text>
               </View>
             </View>
-            <View style={styles.disabledSwitch}>
-              <View style={styles.disabledSwitchCircle} />
-            </View>
+            <Switch
+              value={isBiometricsEnabled}
+              onValueChange={handleToggleBiometrics}
+              disabled={!isBiometricsSupported}
+              trackColor={{ false: '#E0E0E0', true: '#A0BBEB' }}
+              thumbColor={isBiometricsEnabled ? '#0544B3' : '#f4f3f4'}
+            />
           </View>
 
           {/* Change Password Section */}
@@ -146,6 +166,14 @@ export default function SecurityScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <PinCodeModal
+        isVisible={isPinModalVisible}
+        onClose={() => setIsPinModalVisible(false)}
+        onSuccess={handleVerifyPinForBiometrics}
+        loading={pinModalLoading}
+        errorText={pinError}
+        setErrorText={setPinError}
+      />
     </SafeAreaView>
   );
 }
@@ -227,6 +255,7 @@ const styles = StyleSheet.create({
   biometricsLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   biometricsIconBg: {
     width: 40,
@@ -237,10 +266,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 14,
   },
+  biometricsIconBgEnabled: {
+    backgroundColor: '#E6EDFF',
+  },
   biometricsTitle: {
     fontSize: 15,
     fontWeight: '600',
     color: '#A0A0A0',
+  },
+  biometricsTitleEnabled: {
+    color: '#333333',
   },
   biometricsSubtitle: {
     fontSize: 12,

@@ -63,8 +63,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(null);
           setHasPin(null);
         } else {
-          setSession(session);
-          setUser(session?.user ?? null);
           if (session?.user) {
             // Save email of restored session on cold start
             const email = session.user.email;
@@ -75,10 +73,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 SecureStore.setItemAsync('lastEmail', email).catch(() => {});
               }
             }
-            checkPinStatus();
-          } else {
-            setHasPin(true);
+            // Sign out the cold-start session so user must log in again
+            supabase.auth.signOut().catch(() => {});
           }
+          setSession(null);
+          setUser(null);
+          setHasPin(true);
         }
       })
       .catch((err) => {
@@ -105,6 +105,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             SecureStore.setItemAsync('lastEmail', email).catch(() => {});
           }
         }
+        supabase.auth.signOut().catch(() => {});
+        setSession(null);
+        setUser(null);
+        setHasPin(true);
+        setLoading(false);
+        return;
       }
 
       setSession(session);

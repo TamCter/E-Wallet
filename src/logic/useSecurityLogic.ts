@@ -92,8 +92,10 @@ export function useSecurityLogic() {
         return false;
       }
 
-      // PIN is correct, save to hardware encrypted storage
-      await SecureStore.setItemAsync(pinKey, pinInput);
+      // PIN is correct, save to hardware encrypted storage with biometric protection
+      await SecureStore.setItemAsync(pinKey, pinInput, {
+        requireAuthentication: true,
+      });
       await SecureStore.setItemAsync(enabledKey, 'true');
       setIsBiometricsEnabled(true);
       setIsPinModalVisible(false);
@@ -163,10 +165,15 @@ export function useSecurityLogic() {
         // Update stored biometric password if it exists
         if (user?.email) {
           try {
-            const safeEmailKey = user.email.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
-            const hasBioPassword = await SecureStore.getItemAsync(`biometric_password_${safeEmailKey}`);
+            const safeEmailKey = user.email.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
+            const hasBioPassword = await SecureStore.getItemAsync(`biometric_password_${safeEmailKey}`, {
+              requireAuthentication: true,
+              authenticationPrompt: 'Xác thực sinh trắc học để cập nhật thông tin đăng nhập',
+            });
             if (hasBioPassword) {
-              await SecureStore.setItemAsync(`biometric_password_${safeEmailKey}`, newPassword);
+              await SecureStore.setItemAsync(`biometric_password_${safeEmailKey}`, newPassword, {
+                requireAuthentication: true,
+              });
             }
           } catch (err) {
             console.warn('Update biometric password error:', err);

@@ -86,9 +86,11 @@ export function useLoginLogic() {
           localStorage.setItem('lastEmail', email);
         } else {
           await SecureStore.setItemAsync('lastEmail', email);
-          // Save password for biometric login (sanitize email for SecureStore key compatibility)
+          // Save password for biometric login with hardware-backed biometric protection (sanitize email for SecureStore key compatibility)
           const safeEmailKey = email.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
-          await SecureStore.setItemAsync(`biometric_password_${safeEmailKey}`, password);
+          await SecureStore.setItemAsync(`biometric_password_${safeEmailKey}`, password, {
+            requireAuthentication: true,
+          });
         }
       } catch (storeErr) {
         console.log('Could not persist lastEmail or password:', storeErr);
@@ -123,13 +125,6 @@ export function useLoginLogic() {
       }
 
       const safeEmailKey = savedEmail.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
-      const savedPassword = await SecureStore.getItemAsync(`biometric_password_${safeEmailKey}`);
-      if (!savedPassword) {
-        setErrorMessage('Không tìm thấy thông tin đăng nhập sinh trắc học. Vui lòng đăng nhập lại bằng mật khẩu.');
-        setLoading(false);
-        return;
-      }
-
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
@@ -139,13 +134,20 @@ export function useLoginLogic() {
         return;
       }
 
-      const authResult = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Xác thực sinh trắc học để đăng nhập',
-        disableDeviceFallback: false,
-      });
-
-      if (!authResult.success) {
+      let savedPassword = null;
+      try {
+        savedPassword = await SecureStore.getItemAsync(`biometric_password_${safeEmailKey}`, {
+          requireAuthentication: true,
+          authenticationPrompt: 'Xác thực sinh trắc học để đăng nhập',
+        });
+      } catch (err) {
         setErrorMessage('Xác thực sinh trắc học không thành công.');
+        setLoading(false);
+        return;
+      }
+
+      if (!savedPassword) {
+        setErrorMessage('Không tìm thấy thông tin đăng nhập sinh trắc học. Vui lòng đăng nhập lại bằng mật khẩu.');
         setLoading(false);
         return;
       }

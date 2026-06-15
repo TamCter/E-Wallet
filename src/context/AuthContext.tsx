@@ -52,13 +52,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     supabase.auth.getSession()
-      .then(({ data: { session }, error }) => {
+      .then(async ({ data: { session }, error }) => {
         if (error) {
           console.warn('getSession error:', error.message);
           // If the token is invalid, clear the session and force sign out to clean local storage
-          supabase.auth.signOut().catch((err) => {
+          try {
+            await supabase.auth.signOut();
+          } catch (err) {
             console.warn('Failed to sign out on getSession error:', err);
-          });
+          }
           setSession(null);
           setUser(null);
           setHasPin(null);
@@ -70,11 +72,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               if (Platform.OS === 'web') {
                 localStorage.setItem('lastEmail', email);
               } else {
-                SecureStore.setItemAsync('lastEmail', email).catch(() => {});
+                try {
+                  await SecureStore.setItemAsync('lastEmail', email);
+                } catch {}
               }
             }
             // Sign out the cold-start session so user must log in again
-            supabase.auth.signOut().catch(() => {});
+            try {
+              await supabase.auth.signOut();
+            } catch {}
           }
           setSession(null);
           setUser(null);
@@ -95,17 +101,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setLoading(false);
       });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session && event === 'INITIAL_SESSION') {
         const email = session.user.email;
         if (email) {
           if (Platform.OS === 'web') {
             localStorage.setItem('lastEmail', email);
           } else {
-            SecureStore.setItemAsync('lastEmail', email).catch(() => {});
+            try {
+              await SecureStore.setItemAsync('lastEmail', email);
+            } catch {}
           }
         }
-        supabase.auth.signOut().catch(() => {});
+        try {
+          await supabase.auth.signOut();
+        } catch {}
         setSession(null);
         setUser(null);
         setHasPin(true);

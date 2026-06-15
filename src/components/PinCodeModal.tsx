@@ -26,29 +26,28 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
   const handleBiometricsAuth = async () => {
     if (loading) return;
     try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Xác thực sinh trắc học để giao dịch',
-        fallbackLabel: 'Nhập mã PIN',
+      // Retrieve PIN securely, which automatically triggers the OS biometric prompt
+      const savedPin = await SecureStore.getItemAsync(pinKey, {
+        requireAuthentication: true,
+        authenticationPrompt: 'Xác thực sinh trắc học để giao dịch',
       });
 
-      if (result.success) {
-        const savedPin = await SecureStore.getItemAsync(pinKey);
-        if (savedPin) {
-          setPin(savedPin);
-          try {
-            const success = await onSuccess(savedPin);
-            if (!success) {
-              setPin('');
-            }
-          } catch (err) {
+      if (savedPin) {
+        setPin(savedPin);
+        try {
+          const success = await onSuccess(savedPin);
+          if (!success) {
             setPin('');
           }
-        } else {
-          setErrorText('Không tìm thấy mã PIN sinh trắc học.');
+        } catch (err) {
+          setPin('');
         }
+      } else {
+        setErrorText('Không tìm thấy mã PIN sinh trắc học hoặc xác thực thất bại.');
       }
     } catch (err) {
       console.warn('Biometrics auth exception:', err);
+      setErrorText('Xác thực sinh trắc học không thành công.');
     }
   };
 

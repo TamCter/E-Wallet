@@ -93,6 +93,7 @@ export function useLoginLogic() {
           await SecureStore.setItemAsync(`biometric_password_${safeEmailKey}`, password, {
             requireAuthentication: true,
           });
+          await SecureStore.setItemAsync(`has_biometric_password_${safeEmailKey}`, 'true');
         }
       } catch (storeErr) {
         console.log('Could not persist lastEmail or cache password:', storeErr);
@@ -173,6 +174,7 @@ export function useLoginLogic() {
         // Clear invalid saved password
         const safeEmailKey = savedEmail.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
         await SecureStore.deleteItemAsync(`biometric_password_${safeEmailKey}`);
+        await SecureStore.deleteItemAsync(`has_biometric_password_${safeEmailKey}`);
         await SecureStore.deleteItemAsync(`biometric_login_enabled_${safeEmailKey}`);
         setLoading(false);
         return;

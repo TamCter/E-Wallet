@@ -99,6 +99,7 @@ export function useSecurityLogic() {
       try {
         if (user?.email) {
           await SecureStore.deleteItemAsync(`biometric_password_${safeEmailKey}`);
+          await SecureStore.deleteItemAsync(`has_biometric_password_${safeEmailKey}`);
           await SecureStore.setItemAsync(`biometric_login_enabled_${safeEmailKey}`, 'false');
           setIsLoginBiometricsEnabled(false);
           Alert.alert('Thành công', 'Đã tắt đăng nhập bằng sinh trắc học.');
@@ -108,21 +109,23 @@ export function useSecurityLogic() {
       }
     } else {
       // Turn ON -> Check if we have cached password first
-      try {
-        const hasPassword = await SecureStore.getItemAsync(`biometric_password_${safeEmailKey}`);
-        if (!hasPassword) {
-          Alert.alert(
-            'Yêu cầu mật khẩu',
-            'Vui lòng đăng nhập lại bằng mật khẩu ít nhất một lần trên thiết bị này để có thể kích hoạt sinh trắc học.'
-          );
-          return;
+      if (user?.email) {
+        try {
+          const hasPassword = await SecureStore.getItemAsync(`has_biometric_password_${safeEmailKey}`);
+          if (hasPassword !== 'true') {
+            Alert.alert(
+              'Yêu cầu mật khẩu',
+              'Vui lòng đăng nhập lại bằng mật khẩu ít nhất một lần trên thiết bị này để có thể kích hoạt sinh trắc học.'
+            );
+            return;
+          }
+          // Prompt for 6-digit PIN to confirm
+          setPinError('');
+          setPinModalTarget('login_biometrics');
+          setIsPinModalVisible(true);
+        } catch (err) {
+          Alert.alert('Lỗi', 'Vui lòng đăng nhập lại bằng mật khẩu ít nhất một lần để sử dụng sinh trắc học.');
         }
-        // Prompt for 6-digit PIN to confirm
-        setPinError('');
-        setPinModalTarget('login_biometrics');
-        setIsPinModalVisible(true);
-      } catch (err) {
-        Alert.alert('Lỗi', 'Vui lòng đăng nhập lại bằng mật khẩu ít nhất một lần để sử dụng sinh trắc học.');
       }
     }
   };
@@ -240,6 +243,7 @@ export function useSecurityLogic() {
               await SecureStore.setItemAsync(`biometric_password_${safeEmailKey}`, newPassword, {
                 requireAuthentication: true,
               });
+              await SecureStore.setItemAsync(`has_biometric_password_${safeEmailKey}`, 'true');
             }
           } catch (err) {
             console.warn('Update biometric password error:', err);

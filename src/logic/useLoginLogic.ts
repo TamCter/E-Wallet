@@ -135,6 +135,19 @@ export function useLoginLogic() {
         return;
       }
 
+      // Explicitly trigger the biometric scanning prompt to force hardware validation
+      const authResult = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Xác thực sinh trắc học để đăng nhập',
+        fallbackLabel: 'Sử dụng mật khẩu',
+        disableDeviceFallback: false,
+      });
+
+      if (!authResult.success) {
+        setErrorMessage('Xác thực sinh trắc học thất bại hoặc đã bị hủy.');
+        setLoading(false);
+        return;
+      }
+
       let savedPassword = null;
       try {
         savedPassword = await SecureStore.getItemAsync(`biometric_password_${safeEmailKey}`, {
@@ -142,7 +155,7 @@ export function useLoginLogic() {
           authenticationPrompt: 'Xác thực sinh trắc học để đăng nhập',
         });
       } catch (err) {
-        setErrorMessage('Xác thực sinh trắc học không thành công.');
+        setErrorMessage('Không thể truy xuất thông tin đăng nhập sinh trắc học.');
         setLoading(false);
         return;
       }

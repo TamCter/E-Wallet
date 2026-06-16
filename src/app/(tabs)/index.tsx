@@ -1,11 +1,12 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { TransactionItem } from '@/components/ui/TransactionItem';
 import { useHomeLogic } from '@/logic/useHomeLogic';
 import { useNotificationsLogic } from '@/logic/useNotificationsLogic';
+import { useAISpendingLogic } from '@/logic/useAISpendingLogic';
 
 export default function HomepageScreen() {
   const router = useRouter();
@@ -23,14 +24,57 @@ export default function HomepageScreen() {
 
   const { hasUnread } = useNotificationsLogic();
 
+  // AI Spending states and logic
+  const {
+    monthlyLimit,
+    currentSpent,
+    isAILoading,
+    forecastMessage,
+    installmentAlert,
+    hasExceeded,
+    spendingRatio,
+    forecastType,
+    fetchAISpendingData,
+    updateSpendingLimit,
+  } = useAISpendingLogic();
+
+  const [isLimitModalVisible, setIsLimitModalVisible] = useState(false);
+  const [limitInput, setLimitInput] = useState('');
+  const [isUpdatingLimit, setIsUpdatingLimit] = useState(false);
+
   useFocusEffect(
     React.useCallback(() => {
       fetchHomeData();
-    }, [fetchHomeData])
+      fetchAISpendingData();
+    }, [fetchHomeData, fetchAISpendingData])
   );
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN').format(amount);
+  };
+
+  const handleOpenLimitModal = () => {
+    setLimitInput(monthlyLimit > 0 ? monthlyLimit.toString() : '');
+    setIsLimitModalVisible(true);
+  };
+
+  const handleSaveLimit = async () => {
+    const limitNum = parseFloat(limitInput.replace(/[^0-9]/g, ''));
+    if (isNaN(limitNum) || limitNum < 0) {
+      Alert.alert('Lỗi', 'Vui lòng nhập số tiền hạn mức hợp lệ.');
+      return;
+    }
+
+    setIsUpdatingLimit(true);
+    const success = await updateSpendingLimit(limitNum);
+    setIsUpdatingLimit(false);
+
+    if (success) {
+      Alert.alert('Thành công', 'Đã cập nhật hạn mức chi tiêu tháng này.');
+      setIsLimitModalVisible(false);
+    } else {
+      Alert.alert('Lỗi', 'Không thể lưu hạn mức. Vui lòng thử lại.');
+    }
   };
 
   return (
@@ -98,6 +142,115 @@ export default function HomepageScreen() {
           </View>
         </View>
 
+        {/* AI Spending Insights Section */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.aiHeaderTitle}>
+              <Ionicons name="sparkles" size={18} color="#7E57C2" style={{ marginRight: 6 }} />
+              <Text style={[styles.sectionTitle, { color: '#4527A0' }]}>Trợ lý Chi tiêu AI</Text>
+            </View>
+            <TouchableOpacity onPress={handleOpenLimitModal}>
+              <Text style={[styles.seeAllText, { color: '#7E57C2' }]}>Thiết lập</Text>
+            </TouchableOpacity>
+          </View>
+
+          {isAILoading ? (
+            <ActivityIndicator size="small" color="#7E57C2" style={{ paddingVertical: 12 }} />
+          ) : (
+            <View>
+              {monthlyLimit > 0 ? (
+                <View>
+                  {/* Progress Bar Info */}
+                  <View style={styles.aiBudgetRow}>
+                    <Text style={styles.aiBudgetLabel}>
+                      Đã tiêu: <Text style={styles.aiBudgetBold}>{formatCurrency(currentSpent)} đ</Text>
+                    </Text>
+                    <Text style={styles.aiBudgetLabel}>
+                      Hạn mức: <Text style={styles.aiBudgetBold}>{formatCurrency(monthlyLimit)} đ</Text>
+                    </Text>
+                  </View>
+
+                  {/* Progress Bar */}
+                  <View style={styles.aiProgressBg}>
+                    <View
+                      style={[
+                        styles.aiProgressFill,
+                        {
+                          width: `${spendingRatio * 100}%`,
+                          backgroundColor: hasExceeded ? '#D32F2F' : spendingRatio > 0.8 ? '#EF6C00' : '#7E57C2'
+                        }
+                      ]}
+                    />
+                  </View>
+
+                  <View style={styles.aiBudgetMeta}>
+                    <Text style={[styles.aiBudgetPercent, { color: hasExceeded ? '#D32F2F' : '#7E57C2' }]}>
+                      {Math.round(spendingRatio * 100)}%
+                    </Text>
+                    <Text style={styles.aiBudgetRemaining}>
+                      {hasExceeded 
+                        ? `Vượt hạn mức: ${formatCurrency(currentSpent - monthlyLimit)} đ` 
+                        : `Còn lại: ${formatCurrency(monthlyLimit - currentSpent)} đ`}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.noLimitContainer}>
+                  <Text style={styles.noLimitText}>
+                    Bạn chưa đặt hạn mức chi tiêu tháng này. Hãy đặt hạn mức để AI tự động phân tích và cảnh báo.
+                  </Text>
+                  <TouchableOpacity style={[styles.setupLimitBtn, { backgroundColor: '#7E57C2' }]} onPress={handleOpenLimitModal}>
+                    <Text style={styles.setupLimitBtnText}>Đặt hạn mức ngay</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* AI Forecast Banner */}
+              {monthlyLimit > 0 && (
+                <View style={[
+                  styles.aiForecastBox,
+                  forecastType === 'danger' && styles.aiForecastDanger,
+                  forecastType === 'warning' && styles.aiForecastWarning,
+                  forecastType === 'success' && styles.aiForecastSuccess,
+                ]}>
+                  <Ionicons
+                    name={
+                      forecastType === 'danger' ? "alert-circle" :
+                      forecastType === 'warning' ? "warning" :
+                      forecastType === 'success' ? "checkmark-circle" : "information-circle"
+                    }
+                    size={18}
+                    color={
+                      forecastType === 'danger' ? "#C62828" :
+                      forecastType === 'warning' ? "#E65100" :
+                      forecastType === 'success' ? "#2E7D32" : "#512DA8"
+                    }
+                    style={{ marginRight: 8, marginTop: 2 }}
+                  />
+                  <Text style={[
+                    styles.aiForecastText,
+                    forecastType === 'danger' && styles.aiForecastTextDanger,
+                    forecastType === 'warning' && styles.aiForecastTextWarning,
+                    forecastType === 'success' && styles.aiForecastTextSuccess,
+                  ]}>
+                    {forecastMessage}
+                  </Text>
+                </View>
+              )}
+
+              {/* Recurring Installments Alert */}
+              {installmentAlert && (
+                <View style={styles.aiInstallmentBox}>
+                  <Ionicons name="repeat" size={18} color="#00838F" style={{ marginRight: 8, marginTop: 2 }} />
+                  <Text style={styles.aiInstallmentText}>
+                    {installmentAlert}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+
         {/* Recent Transactions */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
@@ -128,6 +281,63 @@ export default function HomepageScreen() {
         </View>
 
       </ScrollView>
+
+      {/* Modal Thiết lập Hạn mức Chi tiêu */}
+      <Modal
+        visible={isLimitModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsLimitModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Hạn mức chi tiêu tháng</Text>
+              <TouchableOpacity onPress={() => setIsLimitModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.modalSubtitle}>
+              Nhập hạn mức chi tiêu bạn mong muốn trong tháng này. Trợ lý AI sẽ tự động theo dõi và gửi cảnh báo sớm nếu bạn tiêu dùng quá nhanh.
+            </Text>
+
+            <View style={styles.modalInputContainer}>
+              <TextInput
+                style={styles.modalInput}
+                keyboardType="numeric"
+                placeholder="Ví dụ: 10,000,000"
+                value={limitInput}
+                onChangeText={setLimitInput}
+                editable={!isUpdatingLimit}
+              />
+              <Text style={styles.modalInputSuffix}>VND</Text>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={() => setIsLimitModalVisible(false)}
+                disabled={isUpdatingLimit}
+              >
+                <Text style={styles.modalBtnCancelText}>Hủy</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnSave, { backgroundColor: '#7E57C2' }]}
+                onPress={handleSaveLimit}
+                disabled={isUpdatingLimit}
+              >
+                {isUpdatingLimit ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.modalBtnSaveText}>Lưu lại</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -377,5 +587,203 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     paddingVertical: 16,
+  },
+  aiHeaderTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  aiBudgetRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  aiBudgetLabel: {
+    fontSize: 13,
+    color: '#666',
+  },
+  aiBudgetBold: {
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+  },
+  aiProgressBg: {
+    height: 8,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  aiProgressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  aiBudgetMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  aiBudgetPercent: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  aiBudgetRemaining: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  noLimitContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  noLimitText: {
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  setupLimitBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  setupLimitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  aiForecastBox: {
+    flexDirection: 'row',
+    backgroundColor: '#F3E5F5',
+    borderWidth: 1,
+    borderColor: '#E1BEE7',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  aiForecastDanger: {
+    backgroundColor: '#FFEBEE',
+    borderColor: '#FFCDD2',
+  },
+  aiForecastWarning: {
+    backgroundColor: '#FFF3E0',
+    borderColor: '#FFE0B2',
+  },
+  aiForecastSuccess: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#C8E6C9',
+  },
+  aiForecastText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#4A148C',
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  aiForecastTextDanger: {
+    color: '#C62828',
+  },
+  aiForecastTextWarning: {
+    color: '#E65100',
+  },
+  aiForecastTextSuccess: {
+    color: '#2E7D32',
+  },
+  aiInstallmentBox: {
+    flexDirection: 'row',
+    backgroundColor: '#E0F7FA',
+    borderWidth: 1,
+    borderColor: '#B2EBF2',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'flex-start',
+  },
+  aiInstallmentText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#006064',
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '90%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+    marginBottom: 20,
+  },
+  modalInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 24,
+  },
+  modalInput: {
+    flex: 1,
+    height: 48,
+    fontSize: 16,
+    color: '#1a1a1a',
+  },
+  modalInputSuffix: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalBtn: {
+    flex: 0.48,
+    height: 44,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBtnCancel: {
+    backgroundColor: '#F5F5F5',
+  },
+  modalBtnCancelText: {
+    color: '#666',
+    fontWeight: '600',
+  },
+  modalBtnSave: {
+    backgroundColor: '#0544B3',
+  },
+  modalBtnSaveText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });

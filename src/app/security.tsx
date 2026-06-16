@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Switch, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,13 +33,6 @@ export default function SecurityScreen() {
     handleVerifyPinForBiometrics,
     isLoginBiometricsEnabled,
     handleToggleLoginBiometrics,
-    isConfirmPasswordModalVisible,
-    setIsConfirmPasswordModalVisible,
-    confirmPasswordInput,
-    setConfirmPasswordInput,
-    confirmPasswordError,
-    confirmPasswordLoading,
-    handleVerifyPasswordForLoginBiometrics,
   } = useSecurityLogic();
 
   return (
@@ -215,61 +208,6 @@ export default function SecurityScreen() {
         setErrorText={setPinError}
       />
 
-      {/* Modal xác nhận mật khẩu để đăng ký sinh trắc học đăng nhập */}
-      <Modal
-        visible={isConfirmPasswordModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsConfirmPasswordModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Xác nhận mật khẩu</Text>
-              <TouchableOpacity onPress={() => setIsConfirmPasswordModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalSubtitle}>
-              Vui lòng nhập mật khẩu tài khoản của bạn để xác minh kích hoạt đăng nhập bằng sinh trắc học.
-            </Text>
-
-            <AuthInput
-              icon="lock-closed-outline"
-              placeholder="Nhập mật khẩu của bạn"
-              isPassword
-              value={confirmPasswordInput}
-              onChangeText={setConfirmPasswordInput}
-            />
-
-            {confirmPasswordError ? (
-              <Text style={styles.modalErrorText}>{confirmPasswordError}</Text>
-            ) : null}
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.modalBtnCancel]}
-                onPress={() => setIsConfirmPasswordModalVisible(false)}
-                disabled={confirmPasswordLoading}
-              >
-                <Text style={styles.modalBtnCancelText}>Hủy</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.modalBtnSave, { backgroundColor: '#0544B3' }]}
-                onPress={handleVerifyPasswordForLoginBiometrics}
-                disabled={confirmPasswordLoading}
-              >
-                {confirmPasswordLoading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.modalBtnSaveText}>Xác nhận</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }

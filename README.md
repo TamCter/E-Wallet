@@ -23,7 +23,34 @@ In the output, you'll find options to open the app in a
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
 - [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Features & Technical Design
+
+### 🔐 Biometric Authentication (Vân tay/Face ID)
+* **OS-Level Security:** Thiết bị kiểm tra vân tay dựa trên cơ sở dữ liệu sinh trắc học nội bộ của hệ điều hành (Keychain/Keystore).
+* **Multi-Account Isolation:** Để bảo mật nhiều tài khoản trên cùng một thiết bị, ứng dụng lưu trữ thông tin đăng nhập biệt lập theo định dạng khóa: `biometric_password_${safeEmailKey}`. Khi xác thực sinh trắc học thành công, mật khẩu tương ứng với email đăng nhập gần đây nhất (`lastEmail`) sẽ được giải mã để tự động đăng nhập.
+
+### 🧠 AI Spending Insights (Gemini API)
+Ứng dụng tích hợp mô hình ngôn ngữ lớn để phân tích hành vi chi tiêu của người dùng:
+* **Tối ưu hóa tài khoản mới:** Bỏ qua việc gọi API bên ngoài nếu người dùng chưa có giao dịch nào (`monthTxs.length === 0`), tăng tốc độ tải màn hình chính và tiết kiệm quota.
+* **Hệ thống Model Dự phòng (Fallback Chain):** Khi gọi API gặp các sự cố quá tải (503 Service Unavailable) từ Google, hệ thống tự động đổi qua các model thay thế theo thứ tự:
+  $$\text{gemini-2.5-flash} \longrightarrow \text{gemini-3.5-flash} \longrightarrow \text{gemini-3.1-flash-lite}$$
+* **Hỗ trợ Offline Mượt mà:** Nếu tất cả model AI đều lỗi hoặc không có kết nối mạng, ứng dụng sẽ kích hoạt mô hình Heuristic Offline để tự động tính toán dự báo chi tiêu cho người dùng mà không làm lỗi màn hình.
+
+---
+
+## Testing & Quality Assurance
+
+Dự án hỗ trợ kiểm tra tĩnh và kiểm thử đơn vị tự động (Unit Tests):
+* **TypeScript Typechecking:**
+  ```bash
+  npm run typecheck
+  ```
+* **Run Unit Tests (Jest):**
+  ```bash
+  npm test
+  ```
+
+---
 
 ## Get a fresh project
 

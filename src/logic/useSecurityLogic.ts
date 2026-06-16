@@ -25,11 +25,8 @@ export function useSecurityLogic() {
   const [pinError, setPinError] = useState('');
   const [pinModalLoading, setPinModalLoading] = useState(false);
 
-  // Password confirmation for enabling login biometrics
-  const [isConfirmPasswordModalVisible, setIsConfirmPasswordModalVisible] = useState(false);
-  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
-  const [confirmPasswordError, setConfirmPasswordError] = useState('');
-  const [confirmPasswordLoading, setConfirmPasswordLoading] = useState(false);
+  // Target tracker to reuse PinCodeModal for both biometrics settings
+  const [pinModalTarget, setPinModalTarget] = useState<'login_biometrics' | 'payment_biometrics' | null>(null);
 
   // Check biometric hardware support and enrollment on mount
   useEffect(() => {
@@ -81,6 +78,7 @@ export function useSecurityLogic() {
     } else {
       // Turn ON -> prompt for transaction PIN
       setPinError('');
+      setPinModalTarget('payment_biometrics');
       setIsPinModalVisible(true);
     }
   };
@@ -94,12 +92,14 @@ export function useSecurityLogic() {
       return;
     }
 
+    const safeEmailKey = user?.email?.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_') ?? '';
+
     if (isLoginBiometricsEnabled) {
       // Turn OFF
       try {
         if (user?.email) {
-          const safeEmailKey = user.email.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
           await SecureStore.deleteItemAsync(`biometric_password_${safeEmailKey}`);
+          await SecureStore.deleteItemAsync(`has_biometric_password_${safeEmailKey}`);
           await SecureStore.setItemAsync(`biometric_login_enabled_${safeEmailKey}`, 'false');
           setIsLoginBiometricsEnabled(false);
           Alert.alert('Thành công', 'Đã tắt đăng nhập bằng sinh trắc học.');
@@ -108,53 +108,25 @@ export function useSecurityLogic() {
         Alert.alert('Lỗi', 'Không thể lưu cài đặt.');
       }
     } else {
-      // Turn ON -> prompt for password
-      setConfirmPasswordError('');
-      setConfirmPasswordInput('');
-      setIsConfirmPasswordModalVisible(true);
-    }
-  };
-
-  const handleVerifyPasswordForLoginBiometrics = async (): Promise<boolean> => {
-    if (!confirmPasswordInput) {
-      setConfirmPasswordError('Vui lòng nhập mật khẩu.');
-      return false;
-    }
-    setConfirmPasswordLoading(true);
-    setConfirmPasswordError('');
-    try {
-      // Re-authenticate user with entered password
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user?.email ?? '',
-        password: confirmPasswordInput,
-      });
-
-      if (signInError) {
-        setConfirmPasswordError('Mật khẩu không chính xác.');
-        setConfirmPasswordLoading(false);
-        return false;
-      }
-
-      // Password is correct, save to SecureStore
+      // Turn ON -> Check if we have cached password first
       if (user?.email) {
-        const safeEmailKey = user.email.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
-        await SecureStore.setItemAsync(`biometric_password_${safeEmailKey}`, confirmPasswordInput, {
-          requireAuthentication: true,
-        });
-        await SecureStore.setItemAsync(`biometric_login_enabled_${safeEmailKey}`, 'true');
-        setIsLoginBiometricsEnabled(true);
-        setIsConfirmPasswordModalVisible(false);
-        setConfirmPasswordLoading(false);
-        setConfirmPasswordInput('');
-        Alert.alert('Thành công', 'Đã bật đăng nhập bằng sinh trắc học.');
-        return true;
+        try {
+          const hasPassword = await SecureStore.getItemAsync(`has_biometric_password_${safeEmailKey}`);
+          if (hasPassword !== 'true') {
+            Alert.alert(
+              'Yêu cầu mật khẩu',
+              'Vui lòng đăng nhập lại bằng mật khẩu ít nhất một lần trên thiết bị này để có thể kích hoạt sinh trắc học.'
+            );
+            return;
+          }
+          // Prompt for 6-digit PIN to confirm
+          setPinError('');
+          setPinModalTarget('login_biometrics');
+          setIsPinModalVisible(true);
+        } catch {
+          Alert.alert('Lỗi', 'Vui lòng đăng nhập lại bằng mật khẩu ít nhất một lần để sử dụng sinh trắc học.');
+        }
       }
-      setConfirmPasswordLoading(false);
-      return false;
-    } catch (err: any) {
-      setConfirmPasswordError(err?.message || 'Không thể xác thực mật khẩu.');
-      setConfirmPasswordLoading(false);
-      return false;
     }
   };
 
@@ -178,16 +150,30 @@ export function useSecurityLogic() {
         return false;
       }
 
-      // PIN is correct, save to hardware encrypted storage with biometric protection
-      await SecureStore.setItemAsync(pinKey, pinInput, {
-        requireAuthentication: true,
-      });
-      await SecureStore.setItemAsync(enabledKey, 'true');
-      setIsBiometricsEnabled(true);
-      setIsPinModalVisible(false);
+      if (pinModalTarget === 'login_biometrics') {
+        if (user?.email) {
+          const safeEmailKey = user.email.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
+          await SecureStore.setItemAsync(`biometric_login_enabled_${safeEmailKey}`, 'true');
+          setIsLoginBiometricsEnabled(true);
+          setIsPinModalVisible(false);
+          setPinModalLoading(false);
+          Alert.alert('Thành công', 'Đã bật đăng nhập bằng sinh trắc học.');
+          return true;
+        }
+      } else if (pinModalTarget === 'payment_biometrics') {
+        // PIN is correct, save to hardware encrypted storage with biometric protection
+        await SecureStore.setItemAsync(pinKey, pinInput, {
+          requireAuthentication: true,
+        });
+        await SecureStore.setItemAsync(enabledKey, 'true');
+        setIsBiometricsEnabled(true);
+        setIsPinModalVisible(false);
+        setPinModalLoading(false);
+        Alert.alert('Thành công', 'Đã bật xác thực sinh trắc học cho giao dịch.');
+        return true;
+      }
       setPinModalLoading(false);
-      Alert.alert('Thành công', 'Đã bật xác thực sinh trắc học cho giao dịch.');
-      return true;
+      return false;
     } catch (err: any) {
       setPinError(err?.message || 'Không thể kết nối đến máy chủ.');
       setPinModalLoading(false);
@@ -257,6 +243,7 @@ export function useSecurityLogic() {
               await SecureStore.setItemAsync(`biometric_password_${safeEmailKey}`, newPassword, {
                 requireAuthentication: true,
               });
+              await SecureStore.setItemAsync(`has_biometric_password_${safeEmailKey}`, 'true');
             }
           } catch (err) {
             console.warn('Update biometric password error:', err);
@@ -305,13 +292,6 @@ export function useSecurityLogic() {
     // Login biometrics
     isLoginBiometricsEnabled,
     handleToggleLoginBiometrics,
-    isConfirmPasswordModalVisible,
-    setIsConfirmPasswordModalVisible,
-    confirmPasswordInput,
-    setConfirmPasswordInput,
-    confirmPasswordError,
-    setConfirmPasswordError,
-    confirmPasswordLoading,
-    handleVerifyPasswordForLoginBiometrics,
+    pinModalTarget,
   };
 }

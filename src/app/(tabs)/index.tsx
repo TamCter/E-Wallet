@@ -31,6 +31,7 @@ export default function HomepageScreen() {
     isAILoading,
     forecastMessage,
     installmentAlert,
+    aiShoppingAlert,
     hasExceeded,
     spendingRatio,
     forecastType,
@@ -62,6 +63,10 @@ export default function HomepageScreen() {
     const limitNum = parseFloat(limitInput.replace(/[^0-9]/g, ''));
     if (isNaN(limitNum) || limitNum < 0) {
       Alert.alert('Lỗi', 'Vui lòng nhập số tiền hạn mức hợp lệ.');
+      return;
+    }
+    if (limitNum > 9999999999999.99) {
+      Alert.alert('Lỗi', 'Hạn mức vượt quá giới hạn tối đa cho phép.');
       return;
     }
 
@@ -244,6 +249,16 @@ export default function HomepageScreen() {
                   <Ionicons name="repeat" size={18} color="#00838F" style={{ marginRight: 8, marginTop: 2 }} />
                   <Text style={styles.aiInstallmentText}>
                     {installmentAlert}
+                  </Text>
+                </View>
+              )}
+
+              {/* AI Supermarket Shopping Alert */}
+              {aiShoppingAlert && (
+                <View style={[styles.aiInstallmentBox, { backgroundColor: '#F3E5F5', borderColor: '#CE93D8' }]}>
+                  <Ionicons name="cart" size={18} color="#8E24AA" style={{ marginRight: 8, marginTop: 2 }} />
+                  <Text style={[styles.aiInstallmentText, { color: '#4A148C' }]}>
+                    {aiShoppingAlert}
                   </Text>
                 </View>
               )}

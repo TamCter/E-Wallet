@@ -35,18 +35,36 @@ const secureStoreChunked = {
 
   setItem: async (key: string, value: string): Promise<void> => {
     try {
-      // Clean up any old chunks first if they exist
-      await secureStoreChunked.removeItem(key);
+      // Get current chunks count of the old stored item to know what needs cleaning up
+      const oldChunksCountStr = await SecureStore.getItemAsync(`${key}_chunks`);
+      const oldChunksCount = oldChunksCountStr ? parseInt(oldChunksCountStr, 10) : 0;
 
       if (value.length <= CHUNK_SIZE) {
+        // Write the single value first. If it succeeds, the old values are safe to clear
         await SecureStore.setItemAsync(key, value);
+        if (oldChunksCount > 0) {
+          await SecureStore.deleteItemAsync(`${key}_chunks`);
+          for (let i = 0; i < oldChunksCount; i++) {
+            await SecureStore.deleteItemAsync(`${key}_chunk_${i}`);
+          }
+        }
       } else {
+        // Write the new chunks first
         const chunksCount = Math.ceil(value.length / CHUNK_SIZE);
-        await SecureStore.setItemAsync(`${key}_chunks`, chunksCount.toString());
-        
         for (let i = 0; i < chunksCount; i++) {
           const chunk = value.substring(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
           await SecureStore.setItemAsync(`${key}_chunk_${i}`, chunk);
+        }
+        // Write the chunks count indicator to finalize/commit the write operation
+        await SecureStore.setItemAsync(`${key}_chunks`, chunksCount.toString());
+
+        // Clean up old obsolete key or leftover chunks
+        if (oldChunksCount === 0) {
+          await SecureStore.deleteItemAsync(key);
+        } else if (oldChunksCount > chunksCount) {
+          for (let i = chunksCount; i < oldChunksCount; i++) {
+            await SecureStore.deleteItemAsync(`${key}_chunk_${i}`);
+          }
         }
       }
     } catch (e) {

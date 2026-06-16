@@ -27,18 +27,6 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
   const handleBiometricsAuth = async () => {
     if (loading) return;
     try {
-      // Explicitly trigger the biometric scanning prompt to force hardware validation
-      const authResult = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Xác thực sinh trắc học để giao dịch',
-        fallbackLabel: 'Sử dụng mã PIN',
-        disableDeviceFallback: false,
-      });
-
-      if (!authResult.success) {
-        setErrorText('Xác thực sinh trắc học thất bại hoặc đã bị hủy.');
-        return;
-      }
-
       // Retrieve PIN securely
       const savedPin = await SecureStore.getItemAsync(pinKey, {
         requireAuthentication: true,
@@ -66,8 +54,10 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
 
   useEffect(() => {
     if (isVisible) {
-      setPin('');
-      setErrorText('');
+      setTimeout(() => {
+        setPin('');
+        setErrorText('');
+      }, 0);
       
       const checkBiometrics = async () => {
         if (Platform.OS === 'web') {
@@ -97,7 +87,7 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
 
       checkBiometrics();
     }
-  }, [isVisible, setErrorText]);
+  }, [isVisible, setErrorText, enabledKey, pinKey]);
 
   useEffect(() => {
     if (isVisible && mode === 'pin') {

@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { safeStorage } from '@/utils/safeStorage';
+import { generateSpendingInsights } from '@/lib/gemini';
 
 export interface AISpendingData {
   monthlyLimit: number;
   currentSpent: number;
   forecastMessage: string;
   installmentAlert: string | null;
+  aiShoppingAlert: string | null;
   hasExceeded: boolean;
   spendingRatio: number; // 0 to 1
   forecastType: 'success' | 'warning' | 'danger' | 'info';
@@ -18,6 +20,7 @@ export function useAISpendingLogic() {
   const [isAILoading, setIsAILoading] = useState<boolean>(true);
   const [forecastMessage, setForecastMessage] = useState<string>('');
   const [installmentAlert, setInstallmentAlert] = useState<string | null>(null);
+  const [aiShoppingAlert, setAiShoppingAlert] = useState<string | null>(null);
   const [hasExceeded, setHasExceeded] = useState<boolean>(false);
   const [spendingRatio, setSpendingRatio] = useState<number>(0);
   const [forecastType, setForecastType] = useState<'success' | 'warning' | 'danger' | 'info'>('info');
@@ -93,12 +96,20 @@ export function useAISpendingLogic() {
 
       const { data: monthTxs, error: monthTxsError } = await supabase
         .from('transactions')
-        .select('amount, type, created_at')
+        .select('amount, type, created_at, description')
         .eq('sender_wallet_id', userWalletId)
         .gte('created_at', firstDayOfMonth);
 
+      if (monthTxsError) {
+        console.error('Error fetching month transactions:', monthTxsError);
+        setForecastMessage('Không thể tải dữ liệu chi tiêu từ hệ thống.');
+        setForecastType('danger');
+        setIsAILoading(false);
+        return;
+      }
+
       let spentSum = 0;
-      if (!monthTxsError && monthTxs) {
+      if (monthTxs) {
         spentSum = monthTxs.reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
       }
       setCurrentSpent(spentSum);
@@ -109,11 +120,56 @@ export function useAISpendingLogic() {
 
       const { data: historyTxs, error: histError } = await supabase
         .from('transactions')
-        .select('id, amount, created_at')
+        .select('id, amount, type, created_at, description')
         .eq('sender_wallet_id', userWalletId)
         .gte('created_at', ninetyDaysAgo.toISOString())
         .order('created_at', { ascending: true });
 
+      // --- Gemini API Call if Key is Present ---
+      const geminiApiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+      if (geminiApiKey && monthTxs) {
+        try {
+          const monthlyGeminiTxs = monthTxs.map(tx => ({
+            amount: parseFloat(tx.amount),
+            type: tx.type,
+            created_at: tx.created_at,
+            description: tx.description
+          }));
+
+          const historyGeminiTxs = (historyTxs || []).map(tx => ({
+            amount: parseFloat(tx.amount),
+            type: tx.type,
+            created_at: tx.created_at,
+            description: tx.description
+          }));
+
+          const insights = await generateSpendingInsights(
+            monthlyGeminiTxs,
+            historyGeminiTxs,
+            limitValue,
+            spentSum
+          );
+
+          setForecastMessage(insights.forecastMessage);
+          setInstallmentAlert(insights.installmentAlert);
+          setAiShoppingAlert(insights.aiShoppingAlert);
+          setForecastType(insights.forecastType);
+
+          if (limitValue > 0) {
+            setSpendingRatio(Math.min(1, spentSum / limitValue));
+            setHasExceeded(spentSum >= limitValue);
+          } else {
+            setSpendingRatio(0);
+            setHasExceeded(false);
+          }
+          setIsAILoading(false);
+          return; // Skip offline fallback on success
+        } catch (geminiError) {
+          console.warn('Gemini API call failed, falling back to local heuristic model:', geminiError);
+        }
+      }
+
+      // --- Offline Fallback Heuristics ---
       let detectedInstallmentMsg: string | null = null;
       if (!histError && historyTxs && historyTxs.length > 0) {
         const detectedInstallments: { amount: number; day: number }[] = [];
@@ -161,6 +217,53 @@ export function useAISpendingLogic() {
         }
       }
       setInstallmentAlert(detectedInstallmentMsg);
+
+      // 5.5 Run AI Supermarket shopping detection and analysis
+      let detectedShoppingMsg: string | null = null;
+      if (monthTxs && monthTxs.length > 0) {
+        const supermarketRegex = /(winmart|coopmart|co\.opmart|lotte|aeon|bachhoaxanh|bhx|bigc|go!)/i;
+        const codeRegex = /[a-zA-Z0-9]*(?:bill|scan|gd|code|txn|ma|hd|qr)[a-zA-Z0-9-]*|(?:\d{4,})/i;
+
+        const shoppingTxs = monthTxs.filter(tx => 
+          tx.description && supermarketRegex.test(tx.description)
+        );
+
+        if (shoppingTxs.length > 0) {
+          const totalShoppingAmount = shoppingTxs.reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
+          const detectedStores = new Set<string>();
+          const detectedCodes: string[] = [];
+
+          shoppingTxs.forEach(tx => {
+            const desc = tx.description || '';
+            const matchStore = desc.match(supermarketRegex);
+            if (matchStore) {
+              let storeName = matchStore[0].toLowerCase();
+              if (storeName === 'bhx' || storeName === 'bachhoaxanh') storeName = 'Bách Hóa Xanh';
+              else if (storeName === 'coopmart' || storeName === 'co.opmart') storeName = 'Co.opmart';
+              else if (storeName === 'winmart') storeName = 'WinMart';
+              else if (storeName === 'lotte') storeName = 'Lotte Mart';
+              else if (storeName === 'aeon') storeName = 'AEON';
+              else if (storeName === 'bigc') storeName = 'Big C';
+              else if (storeName === 'go!') storeName = 'GO! Mall';
+              detectedStores.add(storeName);
+            }
+
+            const matchCode = desc.match(codeRegex);
+            if (matchCode) {
+              detectedCodes.push(matchCode[0].toUpperCase());
+            }
+          });
+
+          const storesStr = Array.from(detectedStores).join(', ');
+          const codesStr = detectedCodes.slice(0, 3).join(', ') + (detectedCodes.length > 3 ? '...' : '');
+
+          detectedShoppingMsg = `🤖 Phân tích AI: Phát hiện ${shoppingTxs.length} giao dịch mua sắm tại siêu thị (${storesStr}) trong tháng. ` +
+            `Tổng chi tiêu mua sắm là ${formatCurrency(totalShoppingAmount)} đ. ` +
+            (detectedCodes.length > 0 ? `Mã hóa đơn phát hiện: [${codesStr}]. ` : '') +
+            `Chi phí này chiếm ${Math.round((totalShoppingAmount / (limitValue || 1)) * 100)}% hạn mức tháng của bạn.`;
+        }
+      }
+      setAiShoppingAlert(detectedShoppingMsg);
 
       // 6. Forecast & limit calculations
       if (limitValue === 0) {
@@ -215,17 +318,17 @@ export function useAISpendingLogic() {
           throw error;
         }
       } catch (dbErr) {
-        console.warn('Error saving limit to DB, saving locally instead:', dbErr);
+        console.error('Error saving limit to DB:', dbErr);
+        // Return false immediately to prevent silent local storage divergence
+        return false;
       }
 
-      // Always save to safeStorage for backup/offline fallback
+      // Only save locally and update state if DB write succeeded
       await safeStorage.setItem(`spending_limit_${userId}`, newLimit.toString());
       setMonthlyLimit(newLimit);
       
-      // Refresh calculations with new limit
-      setTimeout(() => {
-        fetchAISpendingData();
-      }, 200);
+      // Refresh calculations with new limit immediately
+      await fetchAISpendingData();
 
       return true;
     } catch (e) {
@@ -240,6 +343,7 @@ export function useAISpendingLogic() {
     isAILoading,
     forecastMessage,
     installmentAlert,
+    aiShoppingAlert,
     hasExceeded,
     spendingRatio,
     forecastType,

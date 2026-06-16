@@ -23,3 +23,17 @@ CREATE POLICY "Users can update own spending limit" ON public.spending_limits
 
 CREATE POLICY "Users can delete own spending limit" ON public.spending_limits
     FOR DELETE USING (user_id = auth.uid());
+
+-- Create trigger to automatically update updated_at
+CREATE OR REPLACE FUNCTION public.handle_update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_spending_limits_timestamp
+    BEFORE UPDATE ON public.spending_limits
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_update_timestamp();

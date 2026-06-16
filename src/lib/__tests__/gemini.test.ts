@@ -3,9 +3,11 @@ import { generateSpendingInsights } from '../gemini';
 
 describe('generateSpendingInsights', () => {
   let originalKey: string | undefined;
+  let originalFetch: typeof globalThis.fetch;
 
   beforeAll(() => {
     originalKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+    originalFetch = globalThis.fetch;
   });
 
   beforeEach(() => {
@@ -18,6 +20,11 @@ describe('generateSpendingInsights', () => {
       delete process.env.EXPO_PUBLIC_GEMINI_API_KEY;
     } else {
       process.env.EXPO_PUBLIC_GEMINI_API_KEY = originalKey;
+    }
+    if (originalFetch === undefined) {
+      delete (globalThis as any).fetch;
+    } else {
+      globalThis.fetch = originalFetch;
     }
     jest.restoreAllMocks();
   });
@@ -135,5 +142,74 @@ describe('generateSpendingInsights', () => {
       'Gemini API returned status 503: Service Unavailable'
     );
     expect(mockFetch).toHaveBeenCalledTimes(3); // Tried all 3 models
+  });
+
+  it('correctly parses JSON responses wrapped in markdown code fences', async () => {
+    const mockResponse = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: `\`\`\`json
+{
+  "forecastMessage": "Xem xét cẩn thận.",
+  "installmentAlert": null,
+  "aiShoppingAlert": null,
+  "forecastType": "warning"
+}
+\`\`\``,
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const mockFetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockResponse,
+    });
+    globalThis.fetch = mockFetch as any;
+
+    const result = await generateSpendingInsights([], [], 0, 0);
+
+    expect(result).toEqual({
+      forecastMessage: 'Xem xét cẩn thận.',
+      installmentAlert: null,
+      aiShoppingAlert: null,
+      forecastType: 'warning',
+    });
+  });
+
+  it('defaults forecastType to "info" if missing or invalid', async () => {
+    const mockResponse = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: JSON.stringify({
+                  forecastMessage: 'Thông tin bình thường.',
+                  installmentAlert: null,
+                  aiShoppingAlert: null,
+                  forecastType: 'invalid-type-here',
+                }),
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const mockFetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockResponse,
+    });
+    globalThis.fetch = mockFetch as any;
+
+    const result = await generateSpendingInsights([], [], 0, 0);
+
+    expect(result.forecastType).toBe('info');
   });
 });

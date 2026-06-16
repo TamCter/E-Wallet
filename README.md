@@ -33,7 +33,7 @@ In the output, you'll find options to open the app in a
 Ứng dụng tích hợp mô hình ngôn ngữ lớn để phân tích hành vi chi tiêu của người dùng:
 * **Tối ưu hóa tài khoản mới:** Bỏ qua việc gọi API bên ngoài nếu người dùng chưa có giao dịch nào (`monthTxs.length === 0`), tăng tốc độ tải màn hình chính và tiết kiệm quota.
 * **Hệ thống Model Dự phòng (Fallback Chain):** Khi gọi API gặp các sự cố quá tải (503 Service Unavailable) từ Google, hệ thống tự động đổi qua các model thay thế theo thứ tự:
-  $$\text{gemini-2.5-flash} \longrightarrow \text{gemini-3.5-flash} \longrightarrow \text{gemini-1.5-flash} \longrightarrow \text{gemini-3.1-flash-lite}$$
+  $$\text{gemini-2.5-flash} \longrightarrow \text{gemini-3.5-flash} \longrightarrow \text{gemini-3.1-flash-lite}$$
 * **Hỗ trợ Offline Mượt mà:** Nếu tất cả model AI đều lỗi hoặc không có kết nối mạng, ứng dụng sẽ kích hoạt mô hình Heuristic Offline để tự động tính toán dự báo chi tiêu cho người dùng mà không làm lỗi màn hình.
 
 ---

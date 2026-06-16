@@ -123,7 +123,7 @@ export function useSecurityLogic() {
           setPinError('');
           setPinModalTarget('login_biometrics');
           setIsPinModalVisible(true);
-        } catch (err) {
+        } catch {
           Alert.alert('Lỗi', 'Vui lòng đăng nhập lại bằng mật khẩu ít nhất một lần để sử dụng sinh trắc học.');
         }
       }

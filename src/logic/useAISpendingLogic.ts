@@ -125,9 +125,9 @@ export function useAISpendingLogic() {
         .gte('created_at', ninetyDaysAgo.toISOString())
         .order('created_at', { ascending: true });
 
-      // --- Gemini API Call if Key is Present ---
+      // --- Gemini API Call if Key is Present AND there are transactions to analyze ---
       const geminiApiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
-      if (geminiApiKey && monthTxs) {
+      if (geminiApiKey && monthTxs && monthTxs.length > 0) {
         try {
           const monthlyGeminiTxs = monthTxs.map(tx => ({
             amount: parseFloat(tx.amount),

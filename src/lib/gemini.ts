@@ -61,66 +61,75 @@ Hãy trả về phản hồi dưới dạng JSON thuần túy (có thể bọc t
   "forecastType": "success" | "warning" | "danger" | "info"
 }`;
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const models = ['gemini-2.5-flash', 'gemini-3.5-flash', 'gemini-1.5-flash', 'gemini-3.1-flash-lite'];
+  let lastError: any = null;
 
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-        }),
-        signal: controller.signal,
+  for (const model of models) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout per attempt
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: prompt,
+                  },
+                ],
+              },
+            ],
+          }),
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        throw new Error(`Gemini API returned status ${response.status}: ${errorText}`);
       }
-    );
 
-    clearTimeout(timeoutId);
+      const data = await response.json();
+      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!responseText) {
+        throw new Error('Empty response from Gemini');
+      }
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`Gemini API returned status ${response.status}: ${errorText}`);
+      // Xử lý bóc tách markdown ```json để ép kiểu dữ liệu an toàn trên bản v1beta fetch
+      const cleanText = responseText.trim();
+      const match = cleanText.match(/^(?:```json\s*)?([\s\S]*?)(?:\s*```)?$/i);
+      const jsonToParse = match ? match[1].trim() : cleanText;
+
+      const result = JSON.parse(jsonToParse);
+      const allowedTypes: ('success' | 'warning' | 'danger' | 'info')[] = ['success', 'warning', 'danger', 'info'];
+      const forecastType = allowedTypes.includes(result.forecastType) ? result.forecastType : 'info';
+
+      return {
+        forecastMessage: result.forecastMessage || 'Không thể tạo dự báo.',
+        installmentAlert: result.installmentAlert || null,
+        aiShoppingAlert: result.aiShoppingAlert || null,
+        forecastType,
+      };
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        lastError = new Error(`Gemini API call timed out for model ${model}`);
+      } else {
+        lastError = error;
+      }
+      console.warn(`Gemini API model ${model} failed:`, lastError.message || lastError);
     }
-
-    const data = await response.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!responseText) {
-      throw new Error('Empty response from Gemini');
-    }
-
-    // Xử lý bóc tách markdown ```json để ép kiểu dữ liệu an toàn trên bản v1beta fetch
-    const cleanText = responseText.trim();
-    const match = cleanText.match(/^(?:```json\s*)?([\s\S]*?)(?:\s*```)?$/i);
-    const jsonToParse = match ? match[1].trim() : cleanText;
-
-    const result = JSON.parse(jsonToParse);
-    const allowedTypes: ('success' | 'warning' | 'danger' | 'info')[] = ['success', 'warning', 'danger', 'info'];
-    const forecastType = allowedTypes.includes(result.forecastType) ? result.forecastType : 'info';
-
-    return {
-      forecastMessage: result.forecastMessage || 'Không thể tạo dự báo.',
-      installmentAlert: result.installmentAlert || null,
-      aiShoppingAlert: result.aiShoppingAlert || null,
-      forecastType,
-    };
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      throw new Error('Gemini API call timed out after 30 seconds');
-    }
-    console.error('Error generating spending insights via Gemini:', error);
-    throw error;
   }
+
+  console.warn('All Gemini API models failed. Falling back to local heuristic model.');
+  throw lastError || new Error('All Gemini API models failed');
 }

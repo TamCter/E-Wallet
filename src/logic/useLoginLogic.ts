@@ -86,15 +86,11 @@ export function useLoginLogic() {
           localStorage.setItem('lastEmail', email);
         } else {
           await SecureStore.setItemAsync('lastEmail', email);
-          // Save password for biometric login with hardware-backed biometric protection (sanitize email for SecureStore key compatibility)
-          const safeEmailKey = email.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
-          await SecureStore.setItemAsync(`biometric_password_${safeEmailKey}`, password, {
-            requireAuthentication: true,
-          });
-          await SecureStore.setItemAsync(`biometric_login_enabled_${safeEmailKey}`, 'true');
+          // Do NOT automatically save password or enable biometric login here.
+          // That must be done explicitly by the user in the Security page!
         }
       } catch (storeErr) {
-        console.log('Could not persist lastEmail or password:', storeErr);
+        console.log('Could not persist lastEmail:', storeErr);
       }
 
       const isUserAdmin = authData.user?.email?.toLowerCase() === 'admin@gmail.com';
@@ -126,6 +122,14 @@ export function useLoginLogic() {
       }
 
       const safeEmailKey = savedEmail.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
+      
+      const loginEnabled = await SecureStore.getItemAsync(`biometric_login_enabled_${safeEmailKey}`);
+      if (loginEnabled !== 'true') {
+        setErrorMessage('Đăng nhập bằng sinh trắc học chưa được kích hoạt. Vui lòng đăng nhập bằng mật khẩu và bật tính năng này trong phần cài đặt Bảo mật.');
+        setLoading(false);
+        return;
+      }
+
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
@@ -142,7 +146,7 @@ export function useLoginLogic() {
           authenticationPrompt: 'Xác thực sinh trắc học để đăng nhập',
         });
       } catch (err) {
-        setErrorMessage('Xác thực sinh trắc học không thành công.');
+        setErrorMessage('Không thể truy xuất thông tin đăng nhập sinh trắc học.');
         setLoading(false);
         return;
       }

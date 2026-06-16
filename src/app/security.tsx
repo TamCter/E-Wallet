@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Switch, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +31,15 @@ export default function SecurityScreen() {
     setPinError,
     pinModalLoading,
     handleVerifyPinForBiometrics,
+    isLoginBiometricsEnabled,
+    handleToggleLoginBiometrics,
+    isConfirmPasswordModalVisible,
+    setIsConfirmPasswordModalVisible,
+    confirmPasswordInput,
+    setConfirmPasswordInput,
+    confirmPasswordError,
+    confirmPasswordLoading,
+    handleVerifyPasswordForLoginBiometrics,
   } = useSecurityLogic();
 
   return (
@@ -51,29 +60,60 @@ export default function SecurityScreen() {
 
           {/* Biometrics Section */}
           <Text style={styles.sectionTitle}>SINH TRẮC HỌC</Text>
-          <View style={styles.biometricsCard}>
-            <View style={styles.biometricsLeft}>
-              <View style={[styles.biometricsIconBg, isBiometricsEnabled && styles.biometricsIconBgEnabled]}>
-                <Ionicons name="finger-print" size={24} color={isBiometricsEnabled ? "#0544B3" : "#A0A0A0"} />
+          <View style={styles.biometricsContainer}>
+            {/* Toggle 1: Login Biometrics */}
+            <View style={styles.biometricsRow}>
+              <View style={styles.biometricsLeft}>
+                <View style={[styles.biometricsIconBg, isLoginBiometricsEnabled && styles.biometricsIconBgEnabled]}>
+                  <Ionicons name="finger-print" size={24} color={isLoginBiometricsEnabled ? "#0544B3" : "#A0A0A0"} />
+                </View>
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text style={[styles.biometricsTitle, isLoginBiometricsEnabled && styles.biometricsTitleEnabled]}>
+                    Đăng nhập bằng sinh trắc học
+                  </Text>
+                  <Text style={styles.biometricsSubtitle}>
+                    {isBiometricsSupported 
+                      ? (isLoginBiometricsEnabled ? 'Đã kích hoạt' : 'Chưa kích hoạt')
+                      : 'Thiết bị không hỗ trợ sinh trắc học'}
+                  </Text>
+                </View>
               </View>
-              <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={[styles.biometricsTitle, isBiometricsEnabled && styles.biometricsTitleEnabled]}>
-                  Xác thực bằng vân tay / Face ID
-                </Text>
-                <Text style={styles.biometricsSubtitle}>
-                  {isBiometricsSupported 
-                    ? (isBiometricsEnabled ? 'Đã kích hoạt cho giao dịch' : 'Chưa kích hoạt')
-                    : 'Thiết bị không hỗ trợ sinh trắc học'}
-                </Text>
-              </View>
+              <Switch
+                value={isLoginBiometricsEnabled}
+                onValueChange={handleToggleLoginBiometrics}
+                disabled={!isBiometricsSupported}
+                trackColor={{ false: '#E0E0E0', true: '#A0BBEB' }}
+                thumbColor={isLoginBiometricsEnabled ? '#0544B3' : '#f4f3f4'}
+              />
             </View>
-            <Switch
-              value={isBiometricsEnabled}
-              onValueChange={handleToggleBiometrics}
-              disabled={!isBiometricsSupported}
-              trackColor={{ false: '#E0E0E0', true: '#A0BBEB' }}
-              thumbColor={isBiometricsEnabled ? '#0544B3' : '#f4f3f4'}
-            />
+
+            <View style={styles.biometricsDivider} />
+
+            {/* Toggle 2: Payment Biometrics */}
+            <View style={styles.biometricsRow}>
+              <View style={styles.biometricsLeft}>
+                <View style={[styles.biometricsIconBg, isBiometricsEnabled && styles.biometricsIconBgEnabled]}>
+                  <Ionicons name="lock-closed" size={24} color={isBiometricsEnabled ? "#0544B3" : "#A0A0A0"} />
+                </View>
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text style={[styles.biometricsTitle, isBiometricsEnabled && styles.biometricsTitleEnabled]}>
+                    Xác thực giao dịch bằng sinh trắc học
+                  </Text>
+                  <Text style={styles.biometricsSubtitle}>
+                    {isBiometricsSupported 
+                      ? (isBiometricsEnabled ? 'Đã kích hoạt' : 'Chưa kích hoạt')
+                      : 'Thiết bị không hỗ trợ sinh trắc học'}
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={isBiometricsEnabled}
+                onValueChange={handleToggleBiometrics}
+                disabled={!isBiometricsSupported}
+                trackColor={{ false: '#E0E0E0', true: '#A0BBEB' }}
+                thumbColor={isBiometricsEnabled ? '#0544B3' : '#f4f3f4'}
+              />
+            </View>
           </View>
 
           {/* Change Password Section */}
@@ -174,6 +214,62 @@ export default function SecurityScreen() {
         errorText={pinError}
         setErrorText={setPinError}
       />
+
+      {/* Modal xác nhận mật khẩu để đăng ký sinh trắc học đăng nhập */}
+      <Modal
+        visible={isConfirmPasswordModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsConfirmPasswordModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Xác nhận mật khẩu</Text>
+              <TouchableOpacity onPress={() => setIsConfirmPasswordModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSubtitle}>
+              Vui lòng nhập mật khẩu tài khoản của bạn để xác minh kích hoạt đăng nhập bằng sinh trắc học.
+            </Text>
+
+            <AuthInput
+              icon="lock-closed-outline"
+              placeholder="Nhập mật khẩu của bạn"
+              isPassword
+              value={confirmPasswordInput}
+              onChangeText={setConfirmPasswordInput}
+            />
+
+            {confirmPasswordError ? (
+              <Text style={styles.modalErrorText}>{confirmPasswordError}</Text>
+            ) : null}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={() => setIsConfirmPasswordModalVisible(false)}
+                disabled={confirmPasswordLoading}
+              >
+                <Text style={styles.modalBtnCancelText}>Hủy</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnSave, { backgroundColor: '#0544B3' }]}
+                onPress={handleVerifyPasswordForLoginBiometrics}
+                disabled={confirmPasswordLoading}
+              >
+                {confirmPasswordLoading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.modalBtnSaveText}>Xác nhận</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -229,10 +325,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     letterSpacing: 0.8,
   },
-  biometricsCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  biometricsContainer: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
@@ -251,6 +344,16 @@ const styles = StyleSheet.create({
         boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.05)',
       },
     }),
+  },
+  biometricsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  biometricsDivider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginVertical: 14,
   },
   biometricsLeft: {
     flexDirection: 'row',
@@ -382,5 +485,82 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '95%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 5,
+      },
+      web: {
+        boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
+      },
+    }),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  modalBtn: {
+    flex: 0.48,
+    height: 44,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBtnCancel: {
+    backgroundColor: '#F5F5F5',
+  },
+  modalBtnCancelText: {
+    color: '#666',
+    fontWeight: '600',
+  },
+  modalBtnSave: {
+    backgroundColor: '#0544B3',
+  },
+  modalBtnSaveText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  modalErrorText: {
+    color: '#D32F2F',
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 16,
+    marginTop: -8,
   },
 });

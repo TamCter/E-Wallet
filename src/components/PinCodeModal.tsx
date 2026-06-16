@@ -19,6 +19,7 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
   const [pin, setPin] = useState('');
   const inputRef = useRef<TextInput>(null);
   const [isBiometricAllowed, setIsBiometricAllowed] = useState(false);
+  const [mode, setMode] = useState<'select' | 'pin'>('pin');
 
   const pinKey = user ? `saved_payment_pin_${user.id}` : 'saved_payment_pin';
   const enabledKey = user ? `biometric_payment_enabled_${user.id}` : 'biometric_payment_enabled';
@@ -26,7 +27,7 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
   const handleBiometricsAuth = async () => {
     if (loading) return;
     try {
-      // Retrieve PIN securely, which automatically triggers the OS biometric prompt
+      // Retrieve PIN securely
       const savedPin = await SecureStore.getItemAsync(pinKey, {
         requireAuthentication: true,
         authenticationPrompt: 'Xác thực sinh trắc học để giao dịch',
@@ -43,7 +44,7 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
           setPin('');
         }
       } else {
-        setErrorText('Không tìm thấy mã PIN sinh trắc học hoặc xác thực thất bại.');
+        setErrorText('Không tìm thấy mã PIN sinh trắc học.');
       }
     } catch (err) {
       console.warn('Biometrics auth exception:', err);
@@ -52,43 +53,55 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
   };
 
   useEffect(() => {
+    let timerId: any = null;
     if (isVisible) {
-      const timer = setTimeout(() => {
+      timerId = setTimeout(() => {
         setPin('');
         setErrorText('');
-        inputRef.current?.focus();
-      }, 300);
-
+      }, 0);
+      
       const checkBiometrics = async () => {
         if (Platform.OS === 'web') {
           setIsBiometricAllowed(false);
+          setMode('pin');
           return;
         }
         try {
           const hasHardware = await LocalAuthentication.hasHardwareAsync();
           const isEnrolled = await LocalAuthentication.isEnrolledAsync();
           const enabled = await SecureStore.getItemAsync(enabledKey);
-          const hasSavedPin = await SecureStore.getItemAsync(pinKey);
 
-          const allowed = hasHardware && isEnrolled && enabled === 'true' && !!hasSavedPin;
+          const allowed = hasHardware && isEnrolled && enabled === 'true';
           setIsBiometricAllowed(allowed);
-
           if (allowed) {
-            setTimeout(() => {
-              handleBiometricsAuth();
-            }, 450);
+            setMode('select');
+          } else {
+            setMode('pin');
           }
         } catch (err) {
           console.warn('checkBiometrics error in modal:', err);
           setIsBiometricAllowed(false);
+          setMode('pin');
         }
       };
 
       checkBiometrics();
+    }
+    return () => {
+      if (timerId) {
+        clearTimeout(timerId);
+      }
+    };
+  }, [isVisible, setErrorText, enabledKey, pinKey]);
 
+  useEffect(() => {
+    if (isVisible && mode === 'pin') {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 150);
       return () => clearTimeout(timer);
     }
-  }, [isVisible, setErrorText]);
+  }, [isVisible, mode]);
 
   const handleTextChange = async (text: string) => {
     if (loading) return;
@@ -137,51 +150,82 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.header}>
-              <Text style={styles.title}>Mã PIN giao dịch</Text>
+              <Text style={styles.title}>
+                {mode === 'select' ? 'Xác thực giao dịch' : 'Mã PIN giao dịch'}
+              </Text>
               <TouchableOpacity onPress={onClose} disabled={loading} style={styles.closeButton}>
                 <Ionicons name="close" size={24} color="#666666" />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.description}>
-              Vui lòng nhập mã PIN gồm 6 chữ số để xác nhận thanh toán bảo mật.
-            </Text>
+            {mode === 'select' ? (
+              <View style={styles.choiceContainer}>
+                <Text style={styles.choiceDescription}>
+                  Chọn phương thức xác thực để hoàn tất thanh toán của bạn.
+                </Text>
 
-            <TouchableWithoutFeedback onPress={() => inputRef.current?.focus()}>
-              <View style={styles.dotsContainer}>{renderDots()}</View>
-            </TouchableWithoutFeedback>
+                <TouchableOpacity
+                  style={[styles.choiceButton, styles.primaryChoice]}
+                  onPress={handleBiometricsAuth}
+                  disabled={loading}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="finger-print" size={28} color="#ffffff" />
+                  <Text style={styles.primaryChoiceText}>Dùng vân tay / Face ID</Text>
+                </TouchableOpacity>
 
-            {errorText ? (
-              <Text style={styles.errorText}>{errorText}</Text>
-            ) : null}
+                <TouchableOpacity
+                  style={[styles.choiceButton, styles.secondaryChoice]}
+                  onPress={() => setMode('pin')}
+                  disabled={loading}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="keypad" size={24} color="#0544B3" />
+                  <Text style={styles.secondaryChoiceText}>Nhập mã PIN giao dịch</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.pinContainer}>
+                <Text style={styles.description}>
+                  Vui lòng nhập mã PIN gồm 6 chữ số để xác nhận thanh toán bảo mật.
+                </Text>
 
-            {isBiometricAllowed && (
-              <TouchableOpacity 
-                style={styles.biometricButton} 
-                onPress={handleBiometricsAuth}
-                disabled={loading}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="finger-print" size={24} color="#0544B3" />
-                <Text style={styles.biometricButtonText}>Xác thực bằng vân tay / Face ID</Text>
-              </TouchableOpacity>
+                <TouchableWithoutFeedback onPress={() => inputRef.current?.focus()}>
+                  <View style={styles.dotsContainer}>{renderDots()}</View>
+                </TouchableWithoutFeedback>
+
+                {errorText ? (
+                  <Text style={styles.errorText}>{errorText}</Text>
+                ) : null}
+
+                {isBiometricAllowed && (
+                  <TouchableOpacity
+                    style={styles.biometricSwitchButton}
+                    onPress={() => setMode('select')}
+                    disabled={loading}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="finger-print" size={20} color="#0544B3" />
+                    <Text style={styles.biometricSwitchText}>Dùng vân tay / Face ID</Text>
+                  </TouchableOpacity>
+                )}
+
+                {loading ? (
+                  <ActivityIndicator size="large" color="#0544B3" style={styles.loader} />
+                ) : null}
+
+                <TextInput
+                  ref={inputRef}
+                  style={styles.hiddenInput}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  value={pin}
+                  onChangeText={handleTextChange}
+                  secureTextEntry
+                  editable={!loading}
+                />
+              </View>
             )}
-
-            {loading ? (
-              <ActivityIndicator size="large" color="#0544B3" style={styles.loader} />
-            ) : null}
-
-            <TextInput
-              ref={inputRef}
-              style={styles.hiddenInput}
-              keyboardType="number-pad"
-              maxLength={6}
-              value={pin}
-              onChangeText={handleTextChange}
-              secureTextEntry
-              autoFocus
-              editable={!loading}
-            />
           </View>
         </View>
       </TouchableWithoutFeedback>
@@ -218,6 +262,52 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
+  },
+  choiceContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 8,
+  },
+  choiceDescription: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 32,
+    paddingHorizontal: 16,
+  },
+  choiceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  primaryChoice: {
+    backgroundColor: '#0544B3',
+  },
+  primaryChoiceText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  secondaryChoice: {
+    backgroundColor: '#F0F4FF',
+    borderWidth: 1,
+    borderColor: '#D0E0FF',
+  },
+  secondaryChoiceText: {
+    color: '#0544B3',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  pinContainer: {
+    width: '100%',
+    alignItems: 'center',
   },
   description: {
     fontSize: 14,
@@ -266,6 +356,23 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
+  biometricSwitchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#F0F4FF',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  biometricSwitchText: {
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0544B3',
+  },
   hiddenInput: {
     position: 'absolute',
     opacity: 0,
@@ -274,24 +381,5 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: 8,
-  },
-  biometricButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 24,
-    backgroundColor: '#E6EDFF',
-    marginTop: 8,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#D0E0FF',
-  },
-  biometricButtonText: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0544B3',
   },
 });

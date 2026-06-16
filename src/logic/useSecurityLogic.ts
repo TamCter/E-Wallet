@@ -20,9 +20,16 @@ export function useSecurityLogic() {
   // Biometric states
   const [isBiometricsSupported, setIsBiometricsSupported] = useState(false);
   const [isBiometricsEnabled, setIsBiometricsEnabled] = useState(false);
+  const [isLoginBiometricsEnabled, setIsLoginBiometricsEnabled] = useState(false);
   const [isPinModalVisible, setIsPinModalVisible] = useState(false);
   const [pinError, setPinError] = useState('');
   const [pinModalLoading, setPinModalLoading] = useState(false);
+
+  // Password confirmation for enabling login biometrics
+  const [isConfirmPasswordModalVisible, setIsConfirmPasswordModalVisible] = useState(false);
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [confirmPasswordLoading, setConfirmPasswordLoading] = useState(false);
 
   // Check biometric hardware support and enrollment on mount
   useEffect(() => {
@@ -38,13 +45,19 @@ export function useSecurityLogic() {
 
         const enabled = await SecureStore.getItemAsync(enabledKey);
         setIsBiometricsEnabled(enabled === 'true');
+
+        if (user?.email) {
+          const safeEmailKey = user.email.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
+          const loginEnabled = await SecureStore.getItemAsync(`biometric_login_enabled_${safeEmailKey}`);
+          setIsLoginBiometricsEnabled(loginEnabled === 'true');
+        }
       } catch (err) {
         console.warn('Check biometrics support error:', err);
         setIsBiometricsSupported(false);
       }
     }
     checkSupport();
-  }, [enabledKey]);
+  }, [enabledKey, user]);
 
   const handleToggleBiometrics = async () => {
     if (!isBiometricsSupported) {
@@ -69,6 +82,79 @@ export function useSecurityLogic() {
       // Turn ON -> prompt for transaction PIN
       setPinError('');
       setIsPinModalVisible(true);
+    }
+  };
+
+  const handleToggleLoginBiometrics = async () => {
+    if (!isBiometricsSupported) {
+      Alert.alert(
+        'Không hỗ trợ',
+        'Thiết bị của bạn không hỗ trợ sinh trắc học hoặc bạn chưa đăng ký vân tay/Face ID.'
+      );
+      return;
+    }
+
+    if (isLoginBiometricsEnabled) {
+      // Turn OFF
+      try {
+        if (user?.email) {
+          const safeEmailKey = user.email.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
+          await SecureStore.deleteItemAsync(`biometric_password_${safeEmailKey}`);
+          await SecureStore.setItemAsync(`biometric_login_enabled_${safeEmailKey}`, 'false');
+          setIsLoginBiometricsEnabled(false);
+          Alert.alert('Thành công', 'Đã tắt đăng nhập bằng sinh trắc học.');
+        }
+      } catch (err) {
+        Alert.alert('Lỗi', 'Không thể lưu cài đặt.');
+      }
+    } else {
+      // Turn ON -> prompt for password
+      setConfirmPasswordError('');
+      setConfirmPasswordInput('');
+      setIsConfirmPasswordModalVisible(true);
+    }
+  };
+
+  const handleVerifyPasswordForLoginBiometrics = async (): Promise<boolean> => {
+    if (!confirmPasswordInput) {
+      setConfirmPasswordError('Vui lòng nhập mật khẩu.');
+      return false;
+    }
+    setConfirmPasswordLoading(true);
+    setConfirmPasswordError('');
+    try {
+      // Re-authenticate user with entered password
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user?.email ?? '',
+        password: confirmPasswordInput,
+      });
+
+      if (signInError) {
+        setConfirmPasswordError('Mật khẩu không chính xác.');
+        setConfirmPasswordLoading(false);
+        return false;
+      }
+
+      // Password is correct, save to SecureStore
+      if (user?.email) {
+        const safeEmailKey = user.email.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
+        await SecureStore.setItemAsync(`biometric_password_${safeEmailKey}`, confirmPasswordInput, {
+          requireAuthentication: true,
+        });
+        await SecureStore.setItemAsync(`biometric_login_enabled_${safeEmailKey}`, 'true');
+        setIsLoginBiometricsEnabled(true);
+        setIsConfirmPasswordModalVisible(false);
+        setConfirmPasswordLoading(false);
+        setConfirmPasswordInput('');
+        Alert.alert('Thành công', 'Đã bật đăng nhập bằng sinh trắc học.');
+        return true;
+      }
+      setConfirmPasswordLoading(false);
+      return false;
+    } catch (err: any) {
+      setConfirmPasswordError(err?.message || 'Không thể xác thực mật khẩu.');
+      setConfirmPasswordLoading(false);
+      return false;
     }
   };
 
@@ -216,5 +302,16 @@ export function useSecurityLogic() {
     setPinError,
     pinModalLoading,
     handleVerifyPinForBiometrics,
+    // Login biometrics
+    isLoginBiometricsEnabled,
+    handleToggleLoginBiometrics,
+    isConfirmPasswordModalVisible,
+    setIsConfirmPasswordModalVisible,
+    confirmPasswordInput,
+    setConfirmPasswordInput,
+    confirmPasswordError,
+    setConfirmPasswordError,
+    confirmPasswordLoading,
+    handleVerifyPasswordForLoginBiometrics,
   };
 }

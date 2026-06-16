@@ -86,11 +86,16 @@ export function useLoginLogic() {
           localStorage.setItem('lastEmail', email);
         } else {
           await SecureStore.setItemAsync('lastEmail', email);
-          // Do NOT automatically save password or enable biometric login here.
-          // That must be done explicitly by the user in the Security page!
+          // Cache the password securely in SecureStore (locked behind hardware biometric authentication)
+          // but do NOT set biometric_login_enabled to 'true'.
+          // The user must explicitly enable biometric login in the Security settings using their 6-digit PIN.
+          const safeEmailKey = email.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_');
+          await SecureStore.setItemAsync(`biometric_password_${safeEmailKey}`, password, {
+            requireAuthentication: true,
+          });
         }
       } catch (storeErr) {
-        console.log('Could not persist lastEmail:', storeErr);
+        console.log('Could not persist lastEmail or cache password:', storeErr);
       }
 
       const isUserAdmin = authData.user?.email?.toLowerCase() === 'admin@gmail.com';

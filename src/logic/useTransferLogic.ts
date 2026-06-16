@@ -227,7 +227,7 @@ export function useTransferLogic() {
           receiver_country_code: cleanCode,
           receiver_phone: cleanPhone,
           transfer_amount: numAmount,
-          transfer_description: note || null
+          transfer_description: note?.trim() || null
         });
 
       if (error) {

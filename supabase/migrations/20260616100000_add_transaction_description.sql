@@ -1,6 +1,9 @@
 -- Add description column to transactions table
 ALTER TABLE public.transactions ADD COLUMN description TEXT;
 
+-- Drop old 3-argument function to avoid overload conflict
+DROP FUNCTION IF EXISTS public.process_transfer(VARCHAR, VARCHAR, DECIMAL);
+
 -- Update process_transfer to support description
 CREATE OR REPLACE FUNCTION public.process_transfer(
     receiver_country_code VARCHAR,
@@ -45,6 +48,16 @@ BEGIN
         RAISE EXCEPTION 'Không thể tự chuyển tiền cho chính mình';
     END IF;
 
+    -- Kiểm tra số tiền chuyển phải lớn hơn 0
+    IF transfer_amount <= 0 THEN
+        RAISE EXCEPTION 'Số tiền chuyển phải lớn hơn 0';
+    END IF;
+
+    -- Kiểm tra số dư người gửi
+    IF (SELECT balance FROM public.wallets WHERE id = v_sender_wallet_id) < transfer_amount THEN
+        RAISE EXCEPTION 'Số dư không đủ để thực hiện giao dịch';
+    END IF;
+
     -- Trừ tiền người gửi
     UPDATE public.wallets 
     SET balance = balance - transfer_amount, updated_at = NOW()
@@ -63,6 +76,8 @@ BEGIN
     RETURN v_transaction_id;
 END;
 $$;
+
+DROP FUNCTION IF EXISTS public.process_transfer(VARCHAR, VARCHAR, DECIMAL);
 
 REVOKE EXECUTE ON FUNCTION public.process_transfer(VARCHAR, VARCHAR, DECIMAL, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.process_transfer(VARCHAR, VARCHAR, DECIMAL, TEXT) TO authenticated;

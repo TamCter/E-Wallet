@@ -257,10 +257,14 @@ export function useAISpendingLogic() {
           const storesStr = Array.from(detectedStores).join(', ');
           const codesStr = detectedCodes.slice(0, 3).join(', ') + (detectedCodes.length > 3 ? '...' : '');
 
+          const percentageClause = limitValue > 0
+            ? `Chi phí này chiếm ${Math.round((totalShoppingAmount / limitValue) * 100)}% hạn mức tháng của bạn.`
+            : 'Bạn chưa thiết lập hạn mức tháng này.';
+
           detectedShoppingMsg = `🤖 Phân tích AI: Phát hiện ${shoppingTxs.length} giao dịch mua sắm tại siêu thị (${storesStr}) trong tháng. ` +
             `Tổng chi tiêu mua sắm là ${formatCurrency(totalShoppingAmount)} đ. ` +
             (detectedCodes.length > 0 ? `Mã hóa đơn phát hiện: [${codesStr}]. ` : '') +
-            `Chi phí này chiếm ${Math.round((totalShoppingAmount / (limitValue || 1)) * 100)}% hạn mức tháng của bạn.`;
+            percentageClause;
         }
       }
       setAiShoppingAlert(detectedShoppingMsg);

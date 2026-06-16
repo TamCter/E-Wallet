@@ -53,8 +53,9 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
   };
 
   useEffect(() => {
+    let timerId: any = null;
     if (isVisible) {
-      setTimeout(() => {
+      timerId = setTimeout(() => {
         setPin('');
         setErrorText('');
       }, 0);
@@ -69,9 +70,8 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
           const hasHardware = await LocalAuthentication.hasHardwareAsync();
           const isEnrolled = await LocalAuthentication.isEnrolledAsync();
           const enabled = await SecureStore.getItemAsync(enabledKey);
-          const hasSavedPin = await SecureStore.getItemAsync(pinKey);
 
-          const allowed = hasHardware && isEnrolled && enabled === 'true' && !!hasSavedPin;
+          const allowed = hasHardware && isEnrolled && enabled === 'true';
           setIsBiometricAllowed(allowed);
           if (allowed) {
             setMode('select');
@@ -87,6 +87,11 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
 
       checkBiometrics();
     }
+    return () => {
+      if (timerId) {
+        clearTimeout(timerId);
+      }
+    };
   }, [isVisible, setErrorText, enabledKey, pinKey]);
 
   useEffect(() => {

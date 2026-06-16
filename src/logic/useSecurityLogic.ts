@@ -145,6 +145,7 @@ export function useSecurityLogic() {
         setIsLoginBiometricsEnabled(true);
         setIsConfirmPasswordModalVisible(false);
         setConfirmPasswordLoading(false);
+        setConfirmPasswordInput('');
         Alert.alert('Thành công', 'Đã bật đăng nhập bằng sinh trắc học.');
         return true;
       }

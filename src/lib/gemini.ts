@@ -60,6 +60,9 @@ Hãy trả về phản hồi dưới dạng JSON thuần túy, với cấu trúc
   "forecastType": "success" | "warning" | "danger" | "info"
 }`;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
   try {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
@@ -82,8 +85,11 @@ Hãy trả về phản hồi dưới dạng JSON thuần túy, với cấu trúc
             responseMimeType: 'application/json',
           },
         }),
+        signal: controller.signal,
       }
     );
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Gemini API returned status ${response.status}`);
@@ -96,13 +102,20 @@ Hãy trả về phản hồi dưới dạng JSON thuần túy, với cấu trúc
     }
 
     const result = JSON.parse(responseText.trim());
+    const allowedTypes: ('success' | 'warning' | 'danger' | 'info')[] = ['success', 'warning', 'danger', 'info'];
+    const forecastType = allowedTypes.includes(result.forecastType) ? result.forecastType : 'info';
+
     return {
       forecastMessage: result.forecastMessage || 'Không thể tạo dự báo.',
       installmentAlert: result.installmentAlert || null,
       aiShoppingAlert: result.aiShoppingAlert || null,
-      forecastType: result.forecastType || 'info',
+      forecastType,
     };
-  } catch (error) {
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Gemini API call timed out after 30 seconds');
+    }
     console.error('Error generating spending insights via Gemini:', error);
     throw error;
   }

@@ -3,8 +3,8 @@ import CryptoJS from 'crypto-js';
 // ZaloPay Sandbox Default credentials
 export const ZALOPAY_CONFIG = {
   app_id: 2553,
-  key1: '9phuAd36lu7degOgp5g519gNCtuxDI6q',
-  key2: 'I4lhMDn5u0mgSL2g9sBB52H5t0w56467',
+  key1: 'PcY4iZIKFCIdgZvA6ueMcMHHUbRLYjPL',
+  key2: 'kLtgPl8HHhfvMuDHPwKfgfsY4Ydm9eIz',
   endpoint_create: 'https://sb-openapi.zalopay.vn/v2/create',
   endpoint_query: 'https://sb-openapi.zalopay.vn/v2/query',
 };

@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.warn('getSession error:', error.message);
           // If the token is invalid, clear the session and force sign out to clean local storage
           try {
-            await supabase.auth.signOut();
+            await supabase.auth.signOut({ scope: 'local' });
           } catch (err) {
             console.warn('Failed to sign out on getSession error:', err);
           }
@@ -79,7 +79,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
             // Sign out the cold-start session so user must log in again
             try {
-              await supabase.auth.signOut();
+              await supabase.auth.signOut({ scope: 'local' });
             } catch {}
           }
           setSession(null);
@@ -114,7 +114,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         }
         try {
-          await supabase.auth.signOut();
+          await supabase.auth.signOut({ scope: 'local' });
         } catch {}
         setSession(null);
         setUser(null);

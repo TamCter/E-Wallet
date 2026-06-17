@@ -3,6 +3,7 @@
 @google/generative-ai
 @react-native-async-storage/async-storage
 @supabase/supabase-js
+crypto-js
 expo
 expo-clipboard
 expo-constants

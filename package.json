@@ -8,6 +8,7 @@
     "@google/generative-ai": "^0.24.1",
     "@react-native-async-storage/async-storage": "^3.1.0",
     "@supabase/supabase-js": "^2.106.2",
+    "crypto-js": "^4.2.0",
     "expo": "~56.0.3",
     "expo-clipboard": "~56.0.4",
     "expo-constants": "~56.0.14",
@@ -40,6 +41,7 @@
   "devDependencies": {
     "@react-native/jest-preset": "^0.86.0",
     "@testing-library/react-native": "^12.5.0",
+    "@types/crypto-js": "^4.2.2",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.0.0",
     "@types/react": "~19.2.2",

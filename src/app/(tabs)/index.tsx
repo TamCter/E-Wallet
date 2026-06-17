@@ -115,9 +115,13 @@ export default function HomepageScreen() {
           </Text>
           
           <View style={styles.cardActions}>
-            <TouchableOpacity style={styles.cardButton} onPress={() => Alert.alert('Nạp tiền', 'Tính năng nạp tiền đang được phát triển.')}>
+            <TouchableOpacity style={styles.cardButton} onPress={() => router.push('/deposit' as any)}>
               <Ionicons name="add" size={20} color="#0544B3" />
               <Text style={styles.cardButtonText}>Nạp tiền</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cardButtonOutline} onPress={() => router.push('/withdraw' as any)}>
+              <Ionicons name="cash-outline" size={20} color="#ffffff" />
+              <Text style={styles.cardButtonOutlineText}>Rút tiền</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -474,7 +478,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 12,
-    flex: 1,
+    flex: 0.48,
     justifyContent: 'center',
   },
   cardButtonText: {

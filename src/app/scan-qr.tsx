@@ -10,7 +10,7 @@ import {
   Image,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import QRCode from 'qrcode';
+import RNQRGenerator from 'rn-qr-generator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +34,7 @@ export default function ScanQrScreen() {
   const [userPhone, setUserPhone] = useState<string>('');
   const [userCountryCode, setUserCountryCode] = useState<string>('+84');
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+  const [qrError, setQrError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
   const [isMyQrVisible, setIsMyQrVisible] = useState<boolean>(false);
   const isMountedRef = useRef<boolean>(true);
@@ -80,21 +81,76 @@ export default function ScanQrScreen() {
 
   // Generate QR code locally when user details are available
   useEffect(() => {
-    if (userPhone) {
-      QRCode.toDataURL(`ewallet:transfer:${userPhone}:${userCountryCode}`, {
-        margin: 1,
-        width: 300,
-      })
-        .then((url) => {
-          if (isMountedRef.current) {
-            setQrCodeDataUrl(url);
-          }
-        })
-        .catch((err) => {
-          console.error('Lỗi sinh mã QR:', err);
-        });
+    if (!userPhone) {
+      if (isMountedRef.current) {
+        setQrError('Không tìm thấy thông tin số điện thoại của người dùng.');
+      }
+      return;
     }
+
+    setQrError(null);
+    RNQRGenerator.generate({
+      value: `ewallet:transfer:${userPhone}:${userCountryCode}`,
+      height: 300,
+      width: 300,
+      base64: true,
+    })
+      .then((response) => {
+        if (isMountedRef.current) {
+          setQrCodeDataUrl(`data:image/png;base64,${response.base64}`);
+          setQrError(null);
+        }
+      })
+      .catch((err) => {
+        console.error('Lỗi sinh mã QR:', err);
+        if (isMountedRef.current) {
+          setQrError('Lỗi khi sinh mã QR. Vui lòng thử lại.');
+        }
+      });
   }, [userPhone, userCountryCode]);
+
+  const handleRetryQrGeneration = async () => {
+    setQrError(null);
+    setQrCodeDataUrl('');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (isMountedRef.current && user) {
+        const phone = user.user_metadata?.phone_number || '';
+        setUserPhone(phone);
+        setUserCountryCode(user.user_metadata?.phone_country_code || '+84');
+        setUserName(user.user_metadata?.full_name || 'Thành viên E-Wallet');
+        
+        if (phone) {
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Lỗi lấy thông tin người dùng:', err);
+    }
+    
+    if (!userPhone) {
+      setQrError('Không tìm thấy thông tin số điện thoại của người dùng.');
+      return;
+    }
+    
+    try {
+      const response = await RNQRGenerator.generate({
+        value: `ewallet:transfer:${userPhone}:${userCountryCode}`,
+        height: 300,
+        width: 300,
+        base64: true,
+      });
+      if (isMountedRef.current) {
+        setQrCodeDataUrl(`data:image/png;base64,${response.base64}`);
+        setQrError(null);
+      }
+    } catch (err) {
+      console.error('Lỗi sinh mã QR:', err);
+      if (isMountedRef.current) {
+        setQrError('Lỗi khi sinh mã QR. Vui lòng thử lại.');
+      }
+    }
+  };
 
   const animatedLineStyle = useAnimatedStyle(() => {
     return {
@@ -252,7 +308,25 @@ export default function ScanQrScreen() {
 
             <Text style={styles.qrName}>{userName}</Text>
             <Text style={styles.qrPhone}>SĐT: {userPhone}</Text>
-            {qrCodeDataUrl ? (
+            {qrError ? (
+              <View style={styles.qrImagePlaceholder}>
+                <Ionicons name="alert-circle-outline" size={36} color="#D32F2F" style={{ marginBottom: 8 }} />
+                <Text style={[styles.loadingTextSmall, { color: '#D32F2F', textAlign: 'center', paddingHorizontal: 16, marginBottom: 12 }]}>
+                  {qrError}
+                </Text>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#0544B3',
+                    paddingVertical: 6,
+                    paddingHorizontal: 16,
+                    borderRadius: 8,
+                  }}
+                  onPress={handleRetryQrGeneration}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' }}>Thử lại</Text>
+                </TouchableOpacity>
+              </View>
+            ) : qrCodeDataUrl ? (
               <View style={styles.qrImageContainer}>
                 <Image
                   source={{ uri: qrCodeDataUrl }}

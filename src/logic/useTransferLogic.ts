@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -15,6 +15,7 @@ export interface RecentContact {
 export function useTransferLogic() {
   const router = useRouter();
   const { phone: paramPhone, countryCode: paramCountryCode } = useLocalSearchParams<{ phone?: string; countryCode?: string }>();
+  const lastProcessedParamsRef = useRef<{ phone?: string; countryCode?: string }>({});
   const [activeTab, setActiveTab] = useState<Tab>('phone');
   const [step, setStep] = useState<Step>('input');
 
@@ -196,12 +197,16 @@ export function useTransferLogic() {
     fetchRecentContacts();
   }, [fetchWalletBalance, fetchRecentContacts]);
   useEffect(() => {
-    if (paramPhone && (phone !== paramPhone || phoneCountryCode !== (paramCountryCode || '+84'))) {
+    const prevPhone = lastProcessedParamsRef.current.phone;
+    const prevCountryCode = lastProcessedParamsRef.current.countryCode;
+
+    if (paramPhone && (paramPhone !== prevPhone || paramCountryCode !== prevCountryCode)) {
+      lastProcessedParamsRef.current = { phone: paramPhone, countryCode: paramCountryCode };
       (async () => {
         await handlePhoneLookup(paramPhone, paramCountryCode || '+84');
       })();
     }
-  }, [paramPhone, paramCountryCode, phone, phoneCountryCode, handlePhoneLookup]);
+  }, [paramPhone, paramCountryCode, handlePhoneLookup]);
   const handleConfirm = () => {
     const numAmount = parseInt(amount.replace(/\./g, ''), 10);
     if (!numAmount || numAmount < 1000) {

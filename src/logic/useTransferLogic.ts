@@ -14,7 +14,7 @@ export interface RecentContact {
 
 export function useTransferLogic() {
   const router = useRouter();
-  const { phone: paramPhone } = useLocalSearchParams<{ phone?: string }>();
+  const { phone: paramPhone, countryCode: paramCountryCode } = useLocalSearchParams<{ phone?: string; countryCode?: string }>();
   const [activeTab, setActiveTab] = useState<Tab>('phone');
   const [step, setStep] = useState<Step>('input');
 
@@ -145,20 +145,7 @@ export function useTransferLogic() {
     }
   }, []);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchWalletBalance();
-    fetchRecentContacts();
-  }, [fetchWalletBalance, fetchRecentContacts]);
-
-  useEffect(() => {
-    if (paramPhone) {
-      setPhone(paramPhone);
-      handlePhoneLookup(paramPhone, '+84');
-    }
-  }, [paramPhone]);
-
-  const handlePhoneLookup = async (customPhone?: string, customCountryCode?: string) => {
+  const handlePhoneLookup = useCallback(async (customPhone?: string, customCountryCode?: string) => {
     const targetPhone = customPhone !== undefined ? customPhone : phone;
     const targetCountryCode = customCountryCode !== undefined ? customCountryCode : phoneCountryCode;
 
@@ -201,8 +188,20 @@ export function useTransferLogic() {
     } finally {
       setIsLookingUp(false);
     }
-  };
+  }, [phone, phoneCountryCode]);
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchWalletBalance();
+    fetchRecentContacts();
+  }, [fetchWalletBalance, fetchRecentContacts]);
+  useEffect(() => {
+    if (paramPhone && (phone !== paramPhone || phoneCountryCode !== (paramCountryCode || '+84'))) {
+      (async () => {
+        await handlePhoneLookup(paramPhone, paramCountryCode || '+84');
+      })();
+    }
+  }, [paramPhone, paramCountryCode, phone, phoneCountryCode, handlePhoneLookup]);
   const handleConfirm = () => {
     const numAmount = parseInt(amount.replace(/\./g, ''), 10);
     if (!numAmount || numAmount < 1000) {

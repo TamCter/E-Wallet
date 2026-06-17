@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,9 @@ import {
   Alert,
   Modal,
   Image,
-  Clipboard,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import QRCode from 'qrcode';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,8 +32,11 @@ export default function ScanQrScreen() {
 
   // User details for "My QR"
   const [userPhone, setUserPhone] = useState<string>('');
+  const [userCountryCode, setUserCountryCode] = useState<string>('+84');
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
   const [isMyQrVisible, setIsMyQrVisible] = useState<boolean>(false);
+  const isMountedRef = useRef<boolean>(true);
 
   // General scanned text modal
   const [scannedText, setScannedText] = useState<string>('');
@@ -42,6 +46,8 @@ export default function ScanQrScreen() {
   const scanLineY = useSharedValue(0);
 
   useEffect(() => {
+    isMountedRef.current = true;
+
     // Start scanning line animation
     scanLineY.value = withRepeat(
       withSequence(
@@ -56,8 +62,9 @@ export default function ScanQrScreen() {
     const fetchUser = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
+        if (isMountedRef.current && user) {
           setUserPhone(user.user_metadata?.phone_number || '');
+          setUserCountryCode(user.user_metadata?.phone_country_code || '+84');
           setUserName(user.user_metadata?.full_name || 'Thành viên E-Wallet');
         }
       } catch (err) {
@@ -65,7 +72,29 @@ export default function ScanQrScreen() {
       }
     };
     fetchUser();
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [scanLineY]);
+
+  // Generate QR code locally when user details are available
+  useEffect(() => {
+    if (userPhone) {
+      QRCode.toDataURL(`ewallet:transfer:${userPhone}:${userCountryCode}`, {
+        margin: 1,
+        width: 300,
+      })
+        .then((url) => {
+          if (isMountedRef.current) {
+            setQrCodeDataUrl(url);
+          }
+        })
+        .catch((err) => {
+          console.error('Lỗi sinh mã QR:', err);
+        });
+    }
+  }, [userPhone, userCountryCode]);
 
   const animatedLineStyle = useAnimatedStyle(() => {
     return {
@@ -101,7 +130,6 @@ export default function ScanQrScreen() {
       </SafeAreaView>
     );
   }
-
   // Handle barcode scanned callback
   const handleBarcodeScanned = ({ data }: { data: string }) => {
     if (scanned || isMyQrVisible || isTextModalVisible) return;
@@ -109,10 +137,13 @@ export default function ScanQrScreen() {
 
     // 1. Check if the QR code is for internal E-Wallet transfer
     if (data.startsWith('ewallet:transfer:')) {
-      const targetPhone = data.replace('ewallet:transfer:', '');
+      const payload = data.replace('ewallet:transfer:', '');
+      const parts = payload.split(':');
+      const targetPhone = parts[0];
+      const targetCountryCode = parts[1] || '+84';
       router.replace({
         pathname: '/transfer',
-        params: { phone: targetPhone, flow: 'qr' },
+        params: { phone: targetPhone, countryCode: targetCountryCode, flow: 'qr' },
       });
       return;
     }
@@ -122,8 +153,8 @@ export default function ScanQrScreen() {
     setIsTextModalVisible(true);
   };
 
-  const copyToClipboard = () => {
-    Clipboard.setString(scannedText);
+  const copyToClipboard = async () => {
+    await Clipboard.setStringAsync(scannedText);
     Alert.alert('Thành công', 'Đã sao chép nội dung vào khay nhớ tạm.');
   };
 
@@ -132,13 +163,11 @@ export default function ScanQrScreen() {
     setScannedText('');
     // delay a bit to prevent immediate re-scan
     setTimeout(() => {
-      setScanned(false);
+      if (isMountedRef.current) {
+        setScanned(false);
+      }
     }, 1000);
   };
-
-  // Generate My QR URL
-  const qrDataStr = `ewallet:transfer:${userPhone}`;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrDataStr)}`;
 
   return (
     <View style={styles.container}>
@@ -223,11 +252,10 @@ export default function ScanQrScreen() {
 
             <Text style={styles.qrName}>{userName}</Text>
             <Text style={styles.qrPhone}>SĐT: {userPhone}</Text>
-
-            {userPhone ? (
+            {qrCodeDataUrl ? (
               <View style={styles.qrImageContainer}>
                 <Image
-                  source={{ uri: qrCodeUrl }}
+                  source={{ uri: qrCodeDataUrl }}
                   style={styles.qrImage}
                   resizeMode="contain"
                 />
@@ -238,7 +266,6 @@ export default function ScanQrScreen() {
                 <Text style={styles.loadingTextSmall}>Đang tải mã...</Text>
               </View>
             )}
-
             <Text style={styles.qrFooterText}>Quét mã này bằng ví E-Wallet để chuyển tiền</Text>
           </View>
         </View>

@@ -1,27 +1,74 @@
-# Welcome to your Expo app 👋
+# E-Wallet Expo Application 📱
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Ứng dụng ví điện tử thông minh tích hợp bảo mật sinh trắc học và phân tích chi tiêu bằng trí tuệ nhân tạo (Gemini AI).
 
-## Get started
+---
 
-1. Install dependencies
+## 🚀 Hướng dẫn Cài đặt & Chạy ứng dụng (Setup & Run)
 
-   ```bash
-   npm install
-   ```
+### 1. Tải dự án (Download / Clone)
+Di chuyển đến thư mục làm việc của bạn và tải mã nguồn về:
+```bash
+git clone <repository_url>
+cd ewallet
+```
 
-2. Start the app
+### 2. Cài đặt các thư viện (Install Dependencies)
+Để cài đặt các thư viện cần thiết được liệt kê trong [requirements.txt](file:///e:/E-wallet/ewallet/requirements.txt), hãy chạy lệnh sau tại thư mục `ewallet`:
 
-   ```bash
-   npx expo start
-   ```
+```bash
+npm install $(cat requirements.txt)
+```
 
-In the output, you'll find options to open the app in a
+Hoặc trên Windows (PowerShell):
+```powershell
+(Get-Content requirements.txt) -join " " | foreach { npm install $_.Split(" ") }
+```
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 3. Cấu hình biến môi trường (Environment Setup)
+Tạo tệp `.env` từ tệp mẫu `.env.example` và điền thông tin cấu hình của bạn:
+```bash
+cp .env.example .env
+```
+Các thông số cần cấu hình trong `.env`:
+* `EXPO_PUBLIC_SUPABASE_URL`: Đường dẫn API của Supabase project.
+* `EXPO_PUBLIC_SUPABASE_ANON_KEY`: Khóa Anon Public của Supabase.
+* `GEMINI_API_KEY`: API Key của Google Gemini.
+
+### 4. Khởi tạo Cơ sở dữ liệu (Database Setup)
+Ứng dụng sử dụng Supabase làm backend. Bạn cần chạy script SQL khởi tạo tại:
+`supabase/migrations/20240527000000_init_schema.sql` trong trang quản trị SQL Editor của Supabase để tạo các bảng `users`, `wallets`, và `transactions`.
+
+### 5. Chạy ứng dụng (Running the App)
+Khởi động máy chủ phát triển Expo:
+```bash
+npm run start
+```
+Quét mã QR bằng ứng dụng **Expo Go** trên điện thoại (iOS/Android) hoặc sử dụng các lệnh sau để chạy trực tiếp trên giả lập:
+* **Android:** `npm run android`
+* **iOS:** `npm run ios`
+* **Web:** `npm run web`
+
+---
+
+## 💡 Hướng dẫn Sử dụng (How to Use)
+
+### 🔑 Đăng ký & Đăng nhập
+1. Đăng ký tài khoản mới bằng Email và Mật khẩu.
+2. Hệ thống sẽ tự động khởi tạo một ví điện tử (`wallet`) đi kèm với số dư mặc định ban đầu để bạn bắt đầu trải nghiệm.
+
+### 🔐 Thiết lập Sinh trắc học (Biometrics)
+1. Đăng nhập vào tài khoản của bạn, truy cập vào phần cài đặt tài khoản trong ứng dụng.
+2. Kích hoạt tính năng **Đăng nhập bằng vân tay/Face ID**.
+3. Ứng dụng sẽ mã hóa và lưu thông tin đăng nhập một cách an toàn vào thiết bị của bạn thông qua Keystore/Keychain.
+4. Từ lần đăng nhập tiếp theo, bạn chỉ cần nhấn vào nút biểu tượng vân tay để mở khóa nhanh chóng.
+
+### 🧠 Trải nghiệm Trí tuệ Nhân tạo (Gemini AI Insights)
+1. Thực hiện một vài giao dịch chuyển tiền hoặc nạp tiền trên ứng dụng.
+2. Quay lại trang chủ, hệ thống sẽ tự động gửi dữ liệu giao dịch ẩn danh tới Gemini AI để phân tích và hiển thị các gợi ý, biểu đồ chi tiêu thông minh.
+3. Nếu mất kết nối mạng hoặc API quá tải, hệ thống dự phòng ngoại tuyến sẽ tự động phân tích hành vi chi tiêu dựa trên thuật toán nội bộ mà không làm gián đoạn trải nghiệm của bạn.
+
+---
 
 ## Features & Technical Design
 
@@ -49,35 +96,3 @@ Dự án hỗ trợ kiểm tra tĩnh và kiểm thử đơn vị tự động (U
   ```bash
   npm test
   ```
-
----
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-### Other setup steps
-
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.

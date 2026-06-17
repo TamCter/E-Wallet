@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 export type Tab = 'phone' | 'qr';
@@ -14,6 +14,7 @@ export interface RecentContact {
 
 export function useTransferLogic() {
   const router = useRouter();
+  const { phone: paramPhone } = useLocalSearchParams<{ phone?: string }>();
   const [activeTab, setActiveTab] = useState<Tab>('phone');
   const [step, setStep] = useState<Step>('input');
 
@@ -149,6 +150,13 @@ export function useTransferLogic() {
     fetchWalletBalance();
     fetchRecentContacts();
   }, [fetchWalletBalance, fetchRecentContacts]);
+
+  useEffect(() => {
+    if (paramPhone) {
+      setPhone(paramPhone);
+      handlePhoneLookup(paramPhone, '+84');
+    }
+  }, [paramPhone]);
 
   const handlePhoneLookup = async (customPhone?: string, customCountryCode?: string) => {
     const targetPhone = customPhone !== undefined ? customPhone : phone;

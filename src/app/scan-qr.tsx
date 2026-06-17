@@ -88,6 +88,7 @@ export default function ScanQrScreen() {
       return;
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setQrError(null);
     RNQRGenerator.generate({
       value: `ewallet:transfer:${userPhone}:${userCountryCode}`,

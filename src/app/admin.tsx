@@ -166,7 +166,12 @@ export default function AdminScreen() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.warn('Admin global sign out failed, performing local sign out:', err);
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      }
       // Clear lastEmail on explicit logout
       if (Platform.OS === 'web') {
         localStorage.removeItem('lastEmail');

@@ -58,7 +58,7 @@ export default function ResetPasswordScreen() {
         } else {
           // Clear current session so they must log in with their new password
           isIntentionalSignOutRef.current = true;
-          await supabase.auth.signOut();
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
           setLoading(false);
           Alert.alert(
             'Thành công',

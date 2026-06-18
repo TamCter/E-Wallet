@@ -123,7 +123,7 @@ export default function OTPVerificationScreen() {
             Alert.alert('Xác thực thất bại', error.message);
           } else {
             // Sign out to clear the auto-logged-in session from verifyOtp
-            await supabase.auth.signOut().catch(() => {});
+            await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
             setLoading(false);
             Alert.alert(
               'Thành công',

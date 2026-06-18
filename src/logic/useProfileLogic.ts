@@ -62,15 +62,24 @@ export function useProfileLogic() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.warn('Global sign out failed, performing local sign out:', err);
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      }
       if (Platform.OS !== 'web') {
-        await SecureStore.deleteItemAsync('supabase.auth.token');
+        try {
+          await SecureStore.deleteItemAsync('supabase.auth.token');
+        } catch {}
       }
       // Clear lastEmail on explicit logout
       if (Platform.OS === 'web') {
         localStorage.removeItem('lastEmail');
       } else {
-        await SecureStore.deleteItemAsync('lastEmail');
+        try {
+          await SecureStore.deleteItemAsync('lastEmail');
+        } catch {}
       }
       router.replace('/login');
     } catch (e) {

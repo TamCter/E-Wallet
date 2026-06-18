@@ -235,7 +235,7 @@ export default function ScanQrScreen() {
         barcodeScannerSettings={{
           barcodeTypes: ['qr'],
         }}
-        onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+        onBarcodeScanned={(scanned || isMyQrVisible || isTextModalVisible) ? undefined : handleBarcodeScanned}
       />
 
       {/* Overlay Mask */}

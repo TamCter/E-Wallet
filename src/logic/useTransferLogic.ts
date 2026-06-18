@@ -3,7 +3,6 @@ import { Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
-export type Tab = 'phone' | 'qr';
 export type Step = 'input' | 'amount' | 'review' | 'success' | 'error';
 
 export interface RecentContact {
@@ -16,7 +15,6 @@ export function useTransferLogic() {
   const router = useRouter();
   const { phone: paramPhone, countryCode: paramCountryCode } = useLocalSearchParams<{ phone?: string; countryCode?: string }>();
   const lastProcessedParamsRef = useRef<{ phone?: string; countryCode?: string }>({});
-  const [activeTab, setActiveTab] = useState<Tab>('phone');
   const [step, setStep] = useState<Step>('input');
 
   const [phoneCountryCode, setPhoneCountryCode] = useState('+84');
@@ -316,8 +314,6 @@ export function useTransferLogic() {
 
   return {
     router,
-    activeTab,
-    setActiveTab,
     step,
     setStep,
     phoneCountryCode,

@@ -13,8 +13,6 @@ import { PinCodeModal } from '@/components/PinCodeModal';
 export default function TransferScreen() {
   const {
     router,
-    activeTab,
-    setActiveTab,
     step,
     setStep,
     phoneCountryCode,
@@ -62,23 +60,7 @@ const renderHeader = () => (
 
   const renderInputStep = () => (
     <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'phone' && styles.tabActive]}
-          onPress={() => setActiveTab('phone')}
-        >
-          <Ionicons name="phone-portrait-outline" size={18} color={activeTab === 'phone' ? '#0544B3' : '#999'} />
-          <Text style={[styles.tabLabel, activeTab === 'phone' && styles.tabLabelActive]}>Số điện thoại</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'qr' && styles.tabActive]}
-          onPress={() => setActiveTab('qr')}
-        >
-          <Ionicons name="qr-code-outline" size={18} color={activeTab === 'qr' ? '#0544B3' : '#999'} />
-          <Text style={[styles.tabLabel, activeTab === 'qr' && styles.tabLabelActive]}>Quét mã QR</Text>
-        </TouchableOpacity>
-      </View>
-      {activeTab === 'phone' ? renderPhoneTab() : renderQRTab()}
+      {renderPhoneTab()}
     </ScrollView>
   );
 
@@ -159,18 +141,7 @@ const renderHeader = () => (
     </View>
   );
 
-  const renderQRTab = () => (
-    <View style={styles.card}>
-      <View style={styles.qrPlaceholder}>
-        <View style={styles.qrFrame}>
-          <Ionicons name="qr-code-outline" size={80} color="#0544B3" />
-        </View>
-        <Text style={styles.qrTitle}>Quét mã QR</Text>
-        <Text style={styles.qrSub}>Tính năng đang được phát triển</Text>
-        <Text style={styles.qrSub}>Vui lòng sử dụng tab Số điện thoại</Text>
-      </View>
-    </View>
-  );
+
 
   const renderAmountStep = () => (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>

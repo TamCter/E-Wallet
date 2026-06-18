@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Modal,
   Image,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import * as Clipboard from 'expo-clipboard';
 import RNQRGenerator from 'rn-qr-generator';
 import { SafeAreaView } from 'react-native-safe-area-context';

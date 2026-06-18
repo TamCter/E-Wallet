@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { safeStorage } from '@/utils/safeStorage';
 
@@ -263,10 +263,7 @@ export function useHomeLogic() {
     }
   }, []);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchHomeData();
-  }, [fetchHomeData]);
+
 
   return {
     userData,

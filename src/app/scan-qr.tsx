@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Modal,
   Image,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 import * as Clipboard from 'expo-clipboard';
 import RNQRGenerator from 'rn-qr-generator';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -288,7 +288,7 @@ export default function ScanQrScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </SafeAreaView>
 
       {/* Modal: My QR Code */}
       <Modal

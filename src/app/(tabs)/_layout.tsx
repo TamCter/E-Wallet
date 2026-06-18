@@ -52,7 +52,7 @@ export default function TabsLayout() {
         listeners={{
           tabPress: (e) => {
             e.preventDefault();
-            router.replace('/scan-qr');
+            router.push('/scan-qr');
           },
         }}
       />

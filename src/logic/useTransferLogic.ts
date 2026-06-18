@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 export type Tab = 'phone' | 'qr';
@@ -14,6 +14,8 @@ export interface RecentContact {
 
 export function useTransferLogic() {
   const router = useRouter();
+  const { phone: paramPhone, countryCode: paramCountryCode } = useLocalSearchParams<{ phone?: string; countryCode?: string }>();
+  const lastProcessedParamsRef = useRef<{ phone?: string; countryCode?: string }>({});
   const [activeTab, setActiveTab] = useState<Tab>('phone');
   const [step, setStep] = useState<Step>('input');
 
@@ -144,13 +146,7 @@ export function useTransferLogic() {
     }
   }, []);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchWalletBalance();
-    fetchRecentContacts();
-  }, [fetchWalletBalance, fetchRecentContacts]);
-
-  const handlePhoneLookup = async (customPhone?: string, customCountryCode?: string) => {
+  const handlePhoneLookup = useCallback(async (customPhone?: string, customCountryCode?: string) => {
     const targetPhone = customPhone !== undefined ? customPhone : phone;
     const targetCountryCode = customCountryCode !== undefined ? customCountryCode : phoneCountryCode;
 
@@ -193,8 +189,24 @@ export function useTransferLogic() {
     } finally {
       setIsLookingUp(false);
     }
-  };
+  }, [phone, phoneCountryCode]);
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchWalletBalance();
+    fetchRecentContacts();
+  }, [fetchWalletBalance, fetchRecentContacts]);
+  useEffect(() => {
+    const prevPhone = lastProcessedParamsRef.current.phone;
+    const prevCountryCode = lastProcessedParamsRef.current.countryCode;
+
+    if (paramPhone && (paramPhone !== prevPhone || paramCountryCode !== prevCountryCode)) {
+      lastProcessedParamsRef.current = { phone: paramPhone, countryCode: paramCountryCode };
+      (async () => {
+        await handlePhoneLookup(paramPhone, paramCountryCode || '+84');
+      })();
+    }
+  }, [paramPhone, paramCountryCode, handlePhoneLookup]);
   const handleConfirm = () => {
     const numAmount = parseInt(amount.replace(/\./g, ''), 10);
     if (!numAmount || numAmount < 1000) {

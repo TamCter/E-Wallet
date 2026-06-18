@@ -40,7 +40,7 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
           if (!success) {
             setPin('');
           }
-        } catch (err) {
+        } catch {
           setPin('');
         }
       } else {
@@ -115,7 +115,7 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
           if (!success) {
             setPin('');
           }
-        } catch (err) {
+        } catch {
           setPin('');
         }
       }

@@ -14,19 +14,21 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
+  const firstSegment = segments[0];
+  const navigationKey = navigationState?.key;
 
   useEffect(() => {
-    if (!navigationState?.key || loading || hasPin === null) return;
+    if (!navigationKey || loading || hasPin === null) return;
 
     const guestOnlyScreens = ['login', 'register', 'onboarding', 'index'];
     const publicScreens = ['reset-password', 'otp-verification', 'forgot-password'];
 
-    const isGuestOnly = guestOnlyScreens.includes(segments[0] || '');
-    const isPublic = publicScreens.includes(segments[0] || '');
+    const isGuestOnly = guestOnlyScreens.includes(firstSegment || '');
+    const isPublic = publicScreens.includes(firstSegment || '');
 
     const isAdmin = session?.user?.email?.toLowerCase() === 'admin@gmail.com';
-    const isAdminScreen = segments[0] === 'admin';
-    const isSetupPinScreen = segments[0] === 'setup-pin';
+    const isAdminScreen = firstSegment === 'admin';
+    const isSetupPinScreen = firstSegment === 'setup-pin';
 
     // Nếu chưa đăng nhập và cố truy cập màn hình cần bảo vệ (không phải guest-only và không phải public)
     if (!session && !isGuestOnly && !isPublic) {
@@ -58,7 +60,7 @@ function RootLayoutNav() {
         }
       }
     }
-  }, [session, loading, hasPin, segments[0], router, navigationState?.key]);
+  }, [session, loading, hasPin, firstSegment, router, navigationKey]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

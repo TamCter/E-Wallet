@@ -125,7 +125,7 @@ export default function HomepageScreen() {
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <ActionIcon icon="paper-plane-outline" label="Chuyển tiền" onPress={() => router.push('/transfer' as any)} />
-          <ActionIcon icon="qr-code-outline" label="Quét mã QR" />
+          <ActionIcon icon="qr-code-outline" label="Quét mã QR" onPress={() => router.push('/scan-qr' as any)} />
           <ActionIcon icon="phone-portrait-outline" label="Nạp ĐT" />
           <ActionIcon icon="grid-outline" label="Dịch vụ" onPress={() => router.push('/services' as any)} />
         </View>

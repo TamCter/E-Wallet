@@ -151,7 +151,7 @@ export function useLoginLogic() {
           requireAuthentication: true,
           authenticationPrompt: 'Xác thực sinh trắc học để đăng nhập',
         });
-      } catch (err) {
+      } catch {
         setErrorMessage('Không thể truy xuất thông tin đăng nhập sinh trắc học.');
         setLoading(false);
         return;

@@ -72,7 +72,7 @@ export function useSecurityLogic() {
         await SecureStore.setItemAsync(enabledKey, 'false');
         setIsBiometricsEnabled(false);
         Alert.alert('Thành công', 'Đã tắt xác thực sinh trắc học cho giao dịch.');
-      } catch (err) {
+      } catch {
         Alert.alert('Lỗi', 'Không thể lưu cài đặt.');
       }
     } else {
@@ -104,7 +104,7 @@ export function useSecurityLogic() {
           setIsLoginBiometricsEnabled(false);
           Alert.alert('Thành công', 'Đã tắt đăng nhập bằng sinh trắc học.');
         }
-      } catch (err) {
+      } catch {
         Alert.alert('Lỗi', 'Không thể lưu cài đặt.');
       }
     } else {

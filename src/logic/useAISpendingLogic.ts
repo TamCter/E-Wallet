@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { safeStorage } from '@/utils/safeStorage';
 import { generateSpendingInsights } from '@/lib/gemini';

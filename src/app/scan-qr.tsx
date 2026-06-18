@@ -239,7 +239,7 @@ export default function ScanQrScreen() {
       />
 
       {/* Overlay Mask */}
-      <View style={styles.overlayContainer}>
+      <SafeAreaView style={styles.overlayContainer}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>

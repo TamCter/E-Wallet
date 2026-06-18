@@ -263,10 +263,7 @@ export function useHomeLogic() {
     }
   }, []);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchHomeData();
-  }, [fetchHomeData]);
+
 
   return {
     userData,

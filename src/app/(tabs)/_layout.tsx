@@ -1,8 +1,9 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View, StyleSheet } from 'react-native';
 
 export default function TabsLayout() {
+  const router = useRouter();
   return (
     <Tabs
       screenOptions={{
@@ -47,6 +48,12 @@ export default function TabsLayout() {
               <Ionicons name="scan-outline" size={24} color="#ffffff" />
             </View>
           ),
+        }}
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+            router.navigate('/scan-qr');
+          },
         }}
       />
       <Tabs.Screen

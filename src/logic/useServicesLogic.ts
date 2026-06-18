@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { safeStorage } from '@/utils/safeStorage';
-import { useAuth } from '@/context/AuthContext';
 
 export type ServiceType = 'electricity' | 'water' | 'wifi' | 'youtube' | 'spotify' | 'netflix';
 
@@ -12,7 +11,6 @@ export interface SimulatedBill {
 }
 
 export function useServicesLogic() {
-  const { triggerHomeRefresh } = useAuth();
   const [balance, setBalance] = useState<number>(0);
   const [loadingBalance, setLoadingBalance] = useState<boolean>(true);
   const [selectedService, setSelectedService] = useState<ServiceType | null>(null);
@@ -293,7 +291,6 @@ export function useServicesLogic() {
       setLastTransactionId(transactionId);
       setIsSuccess(true);
       await fetchWalletBalance();
-      triggerHomeRefresh();
     } catch (err: any) {
       console.error('Lỗi thanh toán dịch vụ:', err);
       setError(err?.message || 'Đã xảy ra lỗi không xác định trong quá trình thanh toán');

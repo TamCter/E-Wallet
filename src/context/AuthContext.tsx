@@ -10,8 +10,6 @@ type AuthContextType = {
   loading: boolean;
   hasPin: boolean | null;
   refreshHasPin: () => Promise<void>;
-  homeRefreshTrigger: number;
-  triggerHomeRefresh: () => void;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,8 +18,6 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   hasPin: null,
   refreshHasPin: async () => {},
-  homeRefreshTrigger: 0,
-  triggerHomeRefresh: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -29,11 +25,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasPin, setHasPin] = useState<boolean | null>(null);
-  const [homeRefreshTrigger, setHomeRefreshTrigger] = useState(0);
-
-  const triggerHomeRefresh = () => {
-    setHomeRefreshTrigger(prev => prev + 1);
-  };
 
   const checkPinStatus = async () => {
     try {
@@ -148,7 +139,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, hasPin, refreshHasPin, homeRefreshTrigger, triggerHomeRefresh }}>
+    <AuthContext.Provider value={{ session, user, loading, hasPin, refreshHasPin }}>
       {children}
     </AuthContext.Provider>
   );

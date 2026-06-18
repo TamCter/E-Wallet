@@ -61,13 +61,26 @@ export default function ScanQrScreen() {
     const fetchUser = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (isMountedRef.current && user) {
-          setUserPhone(user.user_metadata?.phone_number || '');
-          setUserCountryCode(user.user_metadata?.phone_country_code || '+84');
-          setUserName(user.user_metadata?.full_name || 'Thành viên E-Wallet');
+        if (isMountedRef.current) {
+          if (user) {
+            const phone = user.user_metadata?.phone_number || '';
+            setUserPhone(phone);
+            setUserCountryCode(user.user_metadata?.phone_country_code || '+84');
+            setUserName(user.user_metadata?.full_name || 'Thành viên E-Wallet');
+            if (!phone) {
+              setQrError('Không tìm thấy thông tin số điện thoại của người dùng.');
+            } else {
+              setQrError(null);
+            }
+          } else {
+            setQrError('Không tìm thấy thông tin người dùng.');
+          }
         }
       } catch (err) {
         console.warn('Lỗi lấy thông tin người dùng:', err);
+        if (isMountedRef.current) {
+          setQrError('Không thể lấy thông tin người dùng.');
+        }
       }
     };
     fetchUser();
@@ -76,15 +89,6 @@ export default function ScanQrScreen() {
       isMountedRef.current = false;
     };
   }, [scanLineY]);
-
-  // Set QR error if phone is not available
-  useEffect(() => {
-    if (!userPhone && isMountedRef.current) {
-      setQrError('Không tìm thấy thông tin số điện thoại của người dùng.');
-    } else if (userPhone && isMountedRef.current) {
-      setQrError(null);
-    }
-  }, [userPhone]);
 
   const animatedLineStyle = useAnimatedStyle(() => {
     return {

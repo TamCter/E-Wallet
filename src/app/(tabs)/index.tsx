@@ -1,17 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { TransactionItem } from '@/components/ui/TransactionItem';
 import { useHomeLogic } from '@/logic/useHomeLogic';
 import { useNotificationsLogic } from '@/logic/useNotificationsLogic';
 import { useAISpendingLogic } from '@/logic/useAISpendingLogic';
-import { useAuth } from '@/context/AuthContext';
 
 export default function HomepageScreen() {
   const router = useRouter();
-  const { homeRefreshTrigger } = useAuth();
   const {
     userData,
     balance,
@@ -45,10 +43,12 @@ export default function HomepageScreen() {
   const [limitInput, setLimitInput] = useState('');
   const [isUpdatingLimit, setIsUpdatingLimit] = useState(false);
 
-  useEffect(() => {
-    fetchHomeData();
-    fetchAISpendingData();
-  }, [homeRefreshTrigger, fetchHomeData, fetchAISpendingData]);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchHomeData();
+      fetchAISpendingData();
+    }, [fetchHomeData, fetchAISpendingData])
+  );
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN').format(amount);

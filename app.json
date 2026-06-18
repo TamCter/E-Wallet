@@ -40,7 +40,13 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Cho phép E-Wallet truy cập camera để quét mã QR chuyển tiền."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableWithoutFeedback, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableWithoutFeedback, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -120,8 +120,12 @@ export default function SetupPinScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableWithoutFeedback onPress={() => inputRef.current?.focus()}>
-        <View style={styles.content}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <TouchableWithoutFeedback onPress={() => inputRef.current?.focus()}>
+          <View style={styles.content}>
           <View style={styles.iconContainer}>
             <Ionicons name="shield-checkmark-outline" size={40} color="#0544B3" />
           </View>
@@ -152,6 +156,7 @@ export default function SetupPinScreen() {
           />
         </View>
       </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, TouchableWithoutFeedback, ActivityIndicator, TouchableOpacity, Keyboard, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, TextInput, TouchableWithoutFeedback, ActivityIndicator, TouchableOpacity, Keyboard, Platform, KeyboardAvoidingView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
@@ -148,7 +148,11 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.keyboardAvoidingView}
+          >
+            <View style={styles.modalContent}>
             <View style={styles.header}>
               <Text style={styles.title}>
                 {mode === 'select' ? 'Xác thực giao dịch' : 'Mã PIN giao dịch'}
@@ -227,6 +231,7 @@ export function PinCodeModal({ isVisible, onClose, onSuccess, loading, errorText
               </View>
             )}
           </View>
+          </KeyboardAvoidingView>
         </View>
       </TouchableWithoutFeedback>
     </Modal>
@@ -238,6 +243,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
+  },
+  keyboardAvoidingView: {
+    width: '100%',
   },
   modalContent: {
     backgroundColor: '#ffffff',
